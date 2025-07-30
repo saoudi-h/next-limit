@@ -1,0 +1,90 @@
+{
+  "name": "next-limit",
+  "version": "0.1.0",
+  "description": "A simple and reusable Rate Limiter for Node.js applications, built with Redis.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "clean": "del-cli node_modules dist",
+    "prepare": "pnpm build && pnpm husky",
+    "prepublishOnly": "pnpm run test && pnpm run lint",
+    "release": "semantic-release",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "typecheck": "tsc --noEmit",
+    "doc": "typedoc"
+  },
+  "keywords": [
+    "ratelimit",
+    "rate-limiter",
+    "redis",
+    "nextjs",
+    "express",
+    "fastify",
+    "nestjs"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saoudi-h/next-limit.git"
+  },
+  "author": {
+    "name": "Saoudi Hakim",
+    "url": "https://hakimsaoudi.dev",
+    "email": "saoudihakim@gmail.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/saoudi-h/next-limit/issues"
+  },
+  "homepage": "https://github.com/saoudi-h/next-limit#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "redis": "^5.6.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.3",
+    "@semantic-release/npm": "^12.0.2",
+    "@semantic-release/release-notes-generator": "^14.0.3",
+    "@types/node": "^24.1.0",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
+    "globals": "^16.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
+    "semantic-release": "^24.2.7",
+    "tsup": "^8.0.2",
+    "typedoc": "^0.28.7",
+    "typedoc-plugin-markdown": "^4.7.1",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0",
+    "vitest": "^3.2.4"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "prettier --write  --ignore-unknown",
+      "eslint --fix"
+    ]
+  },
+  "peerDependencies": {
+    "redis": "^4.0.0 || ^5.0.0"
+  }
+}
