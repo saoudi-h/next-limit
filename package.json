@@ -1,6 +1,6 @@
 {
     "name": "next-limit",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "description": "A simple and reusable Rate Limiter for Node.js applications, built with Redis.",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
