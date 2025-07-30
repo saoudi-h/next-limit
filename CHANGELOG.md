@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/saoudi-h/next-limit/compare/v1.0.0...v1.0.1) (2025-07-30)
+
+### Bug Fixes
+
+* make Release workflow depends on Test Workflow ([4f1035e](https://github.com/saoudi-h/next-limit/commit/4f1035ea5889da22be57d9c225662fb0b1e46a85))
+
 ## 1.0.0 (2025-07-30)
 
 ### Features
