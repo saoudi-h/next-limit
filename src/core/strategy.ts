@@ -1,9 +1,9 @@
 export interface RateLimiterResult {
-  allowed: boolean;
-  remaining: number;
-  reset: number;
+    allowed: boolean
+    remaining: number
+    reset: number
 }
 
 export interface RateLimitStrategy {
-  limit(identifier: string): Promise<RateLimiterResult>;
+    limit(identifier: string): Promise<RateLimiterResult>
 }

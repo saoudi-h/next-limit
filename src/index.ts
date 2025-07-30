@@ -1,2 +1,6 @@
-export { RateLimiter } from './core/rate-limiter';
-export type { RateLimiterOptions, RateLimiterResult } from './core/rate-limiter';
+export { RateLimiter } from './core/rate-limiter'
+export type { RateLimiterOptions } from './core/rate-limiter'
+export type { RateLimiterResult } from './core/strategy'
+export { createRedisStorage, createMemoryStorage } from './helpers'
+export { expressMiddleware } from './middleware/express'
+export { fastifyMiddleware } from './middleware/fastify'

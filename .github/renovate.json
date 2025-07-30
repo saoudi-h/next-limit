@@ -1,5 +1,9 @@
 {
-    "extends": ["config:recommended", ":label(renovate)", ":semanticCommitTypeAll(chore)"],
+    "extends": [
+        "config:recommended",
+        ":label(renovate)",
+        ":semanticCommitTypeAll(chore)"
+    ],
     "automerge": true,
     "automergeType": "pr",
     "timezone": "Europe/Paris",
