@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/saoudi-h/next-limit/compare/v1.0.0...v1.0.1) (2025-07-30)
+
+### Bug Fixes
+
+* fix API, tests and docs ([97b18d5](https://github.com/saoudi-h/next-limit/commit/97b18d5e62314a4dfdb040a885a4ea20ea6ae81b))
+
 ## 1.0.0 (2025-07-30)
 
 ### Features
