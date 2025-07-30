@@ -1,0 +1,19 @@
+version: '3.8'
+
+# This Docker Compose file is intended for running integration tests.
+# It sets up a Redis container that the test suite can connect to.
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: next-limit-redis-test
+    command: redis-server --requirepass testpassword
+    ports:
+      # Expose Redis on the default port to the host machine.
+      - '6379:6379'
+    # Healthcheck to ensure Redis is ready before tests run against it.
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "testpassword", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
