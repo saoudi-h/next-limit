@@ -3,7 +3,7 @@
  */
 
 export default {
-    repositoryUrl: 'https://github.com/saoudi-h/tw-screens.git',
+    repositoryUrl: 'https://github.com/saoudi-h/next-limit.git',
     branches: ['main'],
     preset: 'conventionalcommits',
     plugins: [

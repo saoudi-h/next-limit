@@ -33,12 +33,15 @@
     },
     "keywords": [
         "ratelimit",
-        "rate-limiter",
         "redis",
         "nextjs",
         "express",
         "fastify",
-        "nestjs"
+        "rate-limiter",
+        "nestjs",
+        "middleware",
+        "security",
+        "typescript"
     ],
     "repository": {
         "type": "git",
@@ -97,5 +100,6 @@
     },
     "peerDependencies": {
         "redis": "^4.0.0 || ^5.0.0"
-    }
+    },
+    "packageManager": "pnpm@10.13.1"
 }
