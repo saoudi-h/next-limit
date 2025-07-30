@@ -32,7 +32,7 @@ jobs:
               run: pnpm install --frozen-lockfile
 
             - name: Start Redis service
-              run: docker-compose -f docker-compose.test.yml up -d
+              run: docker compose --env-file .env.test -f docker-compose.test.yml up -d
 
             - name: Run tests with coverage
               run: pnpm test:coverage
@@ -67,4 +67,4 @@ jobs:
 
             - name: Stop Redis service
               if: always() # Ensure this runs even if tests fail
-              run: docker-compose -f docker-compose.test.yml down
+              run: docker compose --env-file .env.test -f docker-compose.test.yml down
