@@ -64,7 +64,29 @@ const limiter = new RateLimiter({
 ```javascript
 import { expressMiddleware } from 'next-limit';
 
-app.use('/api/', expressMiddleware(limiter));
+app.use('/api/', expressMiddleware({ limiter }));
+```
+
+### Using a Custom Strategy
+
+For more advanced use cases, you can provide your own strategy by implementing the `RateLimitStrategy` interface.
+
+```javascript
+import { RateLimiter, RateLimitStrategy, RateLimiterResult } from 'next-limit';
+
+const myCustomStrategy: RateLimitStrategy = {
+  async limit(identifier) {
+    // ... your custom logic here
+    return { allowed: true, remaining: 10, reset: Date.now() + 1000 };
+  },
+};
+
+const limiter = new RateLimiter({
+  storage: createMemoryStorage(),
+  strategy: myCustomStrategy,
+  windowMs: 60 * 1000,
+  limit: 10,
+});
 ```
 
 ### Fastify Middleware
@@ -72,7 +94,7 @@ app.use('/api/', expressMiddleware(limiter));
 ```javascript
 import { fastifyMiddleware } from 'next-limit';
 
-app.addHook('onRequest', fastifyMiddleware(limiter));
+app.addHook('onRequest', fastifyMiddleware({ limiter }));
 ```
 
 
@@ -81,7 +103,7 @@ app.addHook('onRequest', fastifyMiddleware(limiter));
 | Option     | Type                               | Description                                      |
 | :--------- | :--------------------------------- | :----------------------------------------------- |
 | `storage`  | `StorageAdapter`                   | An instance of a storage adapter.                |
-| `strategy` | `'sliding-window'` \| `'fixed-window'` | The rate limiting strategy to use.               |
+| `strategy` | `'sliding-window'` \| `'fixed-window'` \| `RateLimitStrategy` | The name of a built-in strategy or a custom strategy instance. |
 | `windowMs` | `number`                           | The time window in milliseconds.                 |
 | `limit`    | `number`                           | The maximum number of requests in the window.    |
 | `prefix`   | `string`                           | The prefix for Redis keys. Defaults to `ratelimit`. |

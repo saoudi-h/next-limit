@@ -6,9 +6,9 @@
 
 # Function: createRedisStorage()
 
-> **createRedisStorage**(`redis`): `StorageAdapter`
+> **createRedisStorage**(`redis`): [`StorageAdapter`](../interfaces/StorageAdapter.md)
 
-Defined in: [helpers.ts:26](https://github.com/saoudi-h/next-limit/blob/364f5bf04c9ecd59b43c48876b352d3650948f61/src/helpers.ts#L26)
+Defined in: [helpers.ts:26](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/helpers.ts#L26)
 
 Creates a new `RedisStorageAdapter` instance.
 
@@ -22,7 +22,7 @@ An initialized and connected `RedisClientType` instance from the `redis` package
 
 ## Returns
 
-`StorageAdapter`
+[`StorageAdapter`](../interfaces/StorageAdapter.md)
 
 A new instance of `RedisStorageAdapter`.
 

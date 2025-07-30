@@ -6,10 +6,10 @@
 
 # Class: RateLimiter
 
-Defined in: [core/rate-limiter.ts:34](https://github.com/saoudi-h/next-limit/blob/364f5bf04c9ecd59b43c48876b352d3650948f61/src/core/rate-limiter.ts#L34)
+Defined in: [core/rate-limiter.ts:60](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/rate-limiter.ts#L60)
 
-The main class for rate limiting.
-It orchestrates the selected strategy and storage adapter to perform rate limiting checks.
+A flexible and extensible rate limiter for Node.js applications.
+It supports various strategies and can be adapted to different storage backends.
 
 ## Constructors
 
@@ -17,7 +17,7 @@ It orchestrates the selected strategy and storage adapter to perform rate limiti
 
 > **new RateLimiter**(`options`): `RateLimiter`
 
-Defined in: [core/rate-limiter.ts:43](https://github.com/saoudi-h/next-limit/blob/364f5bf04c9ecd59b43c48876b352d3650948f61/src/core/rate-limiter.ts#L43)
+Defined in: [core/rate-limiter.ts:70](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/rate-limiter.ts#L70)
 
 Creates a new `RateLimiter` instance.
 
@@ -27,7 +27,7 @@ Creates a new `RateLimiter` instance.
 
 [`RateLimiterOptions`](../interfaces/RateLimiterOptions.md)
 
-The configuration options for the rate limiter.
+The options for the rate limiter.
 
 #### Returns
 
@@ -39,7 +39,7 @@ The configuration options for the rate limiter.
 
 > **hit**(`identifier`): `Promise`\<[`RateLimiterResult`](../interfaces/RateLimiterResult.md)\>
 
-Defined in: [core/rate-limiter.ts:86](https://github.com/saoudi-h/next-limit/blob/364f5bf04c9ecd59b43c48876b352d3650948f61/src/core/rate-limiter.ts#L86)
+Defined in: [core/rate-limiter.ts:140](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/rate-limiter.ts#L140)
 
 Checks and registers a hit for a given identifier.
 This is the primary method to be called for each request.
@@ -64,7 +64,7 @@ A promise that resolves to a `RateLimiterResult`.
 
 > **isAllowed**(`identifier`): `Promise`\<[`RateLimiterResult`](../interfaces/RateLimiterResult.md)\>
 
-Defined in: [core/rate-limiter.ts:99](https://github.com/saoudi-h/next-limit/blob/364f5bf04c9ecd59b43c48876b352d3650948f61/src/core/rate-limiter.ts#L99)
+Defined in: [core/rate-limiter.ts:153](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/rate-limiter.ts#L153)
 
 An alias for the `hit` method.
 
