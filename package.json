@@ -32,6 +32,11 @@
         "typecheck": "tsc --noEmit",
         "doc": "typedoc"
     },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
     "keywords": [
         "ratelimit",
         "redis",
