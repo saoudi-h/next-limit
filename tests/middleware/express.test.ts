@@ -55,7 +55,7 @@ describe('Express Middleware', () => {
 
     it('should send a 429 response if the request is denied', async () => {
         // Arrange
-        const resetTime = Date.now() + 1000 * 60
+        const resetTime = Date.now() + 60000
         const result: RateLimiterResult = {
             allowed: false,
             remaining: 0,

@@ -69,16 +69,21 @@ describe('RateLimiter', () => {
         })
 
         it("should throw an error if onError is set to 'throw' and the strategy throws", async () => {
-            const testError = new Error('Storage error')
-            ;(mockStrategy.limit as Mock).mockRejectedValue(testError)
+            const storageError = new Error('Storage error')
+            const strategy: RateLimitStrategy = {
+                limit: vi.fn().mockRejectedValue(storageError),
+            }
 
             const limiter = new RateLimiter({
-                strategy: mockStrategy,
+                strategy,
+                limit: 10,
                 onError: 'throw',
-                limit: 5,
             })
 
-            await expect(limiter.isAllowed('user1')).rejects.toThrow(testError)
+            await expect(limiter.isAllowed('test')).rejects.toThrow(
+                storageError
+            )
+            expect(strategy.limit).toHaveBeenCalledWith('test')
         })
     })
 })
