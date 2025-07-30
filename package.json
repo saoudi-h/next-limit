@@ -26,7 +26,8 @@
         "docker:down": "docker-compose --env-file .env.test -f docker-compose.test.yml down",
         "test": "vitest --exclude \"**/*.integration.test.ts\"",
         "test:ui": "vitest --exclude \"**/*.integration.test.ts\" --ui",
-        "test:coverage": "pnpm run docker:up && vitest run --coverage && pnpm run docker:down",
+        "test:coverage": "vitest run --coverage",
+        "test:coverage:dev": "pnpm run docker:up && vitest run --coverage && pnpm run docker:down",
         "test:integration": "pnpm run docker:up && vitest run --include \"**/*.integration.test.ts\" && pnpm run docker:down",
         "typecheck": "tsc --noEmit",
         "doc": "typedoc"
