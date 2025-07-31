@@ -68,12 +68,10 @@
     "engines": {
         "node": ">=16.0.0"
     },
-    "dependencies": {
-        "next-limit": "link:../../.local/share/pnpm/global/5/node_modules/next-limit",
-        "redis": "^5.6.1",
-        "tsx": "^4.20.3"
-    },
+    "dependencies": {},
     "devDependencies": {
+        "tsx": "^4.20.3",
+        "redis": "^5.6.1",
         "@eslint/js": "^9.32.0",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/commit-analyzer": "^13.0.1",
