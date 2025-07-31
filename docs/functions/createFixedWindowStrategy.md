@@ -8,7 +8,7 @@
 
 > **createFixedWindowStrategy**(`config`): [`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
 
-Defined in: [factories.ts:49](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/factories.ts#L49)
+Defined in: [factories.ts:49](https://github.com/saoudi-h/next-limit/blob/527d4e765919035965098773f4a5584e6ee0095b/src/factories.ts#L49)
 
 Creates a `FixedWindowStrategy` instance.
 
