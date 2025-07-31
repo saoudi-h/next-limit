@@ -25,24 +25,24 @@ jobs:
                   node-version-file: '.nvmrc'
                   cache: 'pnpm'
 
-            - name: Install pnpm
-              uses: pnpm/action-setup@v4
-
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
+
+            - name: Load .env.test
+              run: |
+                  export $(grep -v '^#' .env.test | xargs)
+                  echo "REDIS_PASSWORD=$REDIS_PASSWORD" >> $GITHUB_ENV
+                  echo "REDIS_PORT=$REDIS_PORT" >> $GITHUB_ENV
+                  echo "REDIS_URL=$REDIS_URL" >> $GITHUB_ENV
 
             - name: Start Redis service
               run: docker compose --env-file .env.test -f docker-compose.test.yml up -d
 
-            - name: Run tests with coverage
-              run: pnpm test:coverage
-              env:
-                  REDIS_URL: 'redis://:testpassword@localhost:6379'
-                  REDIS_PASSWORD: 'testpassword'
-                  REDIS_PORT: '6379'
-
             - name: Wait for Redis to be ready
               run: docker compose --env-file .env.test -f docker-compose.test.yml up -d --wait
+
+            - name: Run tests with coverage
+              run: pnpm test:coverage
 
             - name: Upload coverage report
               uses: actions/upload-artifact@v4
@@ -51,5 +51,5 @@ jobs:
                   path: coverage/
 
             - name: Stop Redis service
-              if: always() # Ensure this runs even if tests fail
+              if: always()
               run: docker compose --env-file .env.test -f docker-compose.test.yml down
