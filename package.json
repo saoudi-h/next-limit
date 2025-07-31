@@ -18,7 +18,7 @@
         "lint:fix": "eslint . --fix",
         "clean": "rm -rf node_modules dist coverage docs",
         "prepare": "pnpm build && pnpm husky",
-        "prepublishOnly": "pnpm run test && pnpm run lint",
+        "prepublishOnly": "pnpm run test && pnpm run lint:fix",
         "release": "semantic-release",
         "build:lua": "tsx scripts/lua-minifier.ts",
         "build:package": "tsup --config tsup.config.ts",
@@ -68,7 +68,6 @@
     "engines": {
         "node": ">=16.0.0"
     },
-    "dependencies": {},
     "devDependencies": {
         "tsx": "^4.20.3",
         "redis": "^5.6.1",
