@@ -3,102 +3,49 @@
  */
 
 import { RateLimiterResult, RateLimitStrategy } from './strategy'
-import { StorageAdapter } from './storage'
-import { FixedWindowStrategy } from '../strategies/fixed-window'
-import { SlidingWindowStrategy } from '../strategies/sliding-window'
+import { Storage } from './storage'
 
 /**
- * Defines the names for the built-in rate limiting strategies.
+ * Defines the public interface for a rate limiter instance.
+ * This is what the factory function `createRateLimiter` will return.
  */
-export type BuiltInStrategyName = 'fixed-window' | 'sliding-window'
+export interface RateLimiterInstance {
+    /**
+     * Consumes a point for a given identifier.
+     * This is the primary method to be called for each request to be rate-limited.
+     *
+     * @param identifier A unique string identifying the client (e.g., IP address).
+     * @returns A promise that resolves to a `RateLimiterResult`.
+     */
+    consume(identifier: string): Promise<RateLimiterResult>
+}
 
 /**
- * Options for creating a `RateLimiter` instance.
+ * Internal options for creating a `RateLimiter` instance.
+ * This is not part of the public API.
+ * @internal
  */
-export interface RateLimiterOptions {
-    /**
-     * The storage adapter to use for persisting rate limit data.
-     */
-    storage: StorageAdapter
-
-    /**
-     * The rate limiting strategy to use.
-     * It can be the name of a built-in strategy or a custom `RateLimitStrategy` instance.
-     */
-    strategy: BuiltInStrategyName | RateLimitStrategy
-
-    /**
-     * The duration of the rate limit window in milliseconds.
-     */
-    windowMs: number
-
-    /**
-     * The maximum number of requests allowed within the window.
-     */
-    limit: number
-
-    /**
-     * An optional prefix for storage keys to avoid collisions.
-     * @default 'ratelimit'
-     */
-    prefix?: string
-
-    /**
-     * Defines the behavior when a rate limit is exceeded.
-     * - 'allow': The request is allowed to proceed.
-     * - 'deny': The request is denied (default).
-     * - 'throw': An error is thrown.
-     * @default 'deny'
-     */
+export interface InternalRateLimiterOptions {
+    strategy: RateLimitStrategy
+    storage: Storage
     onError?: 'allow' | 'deny' | 'throw'
 }
 
 /**
  * A flexible and extensible rate limiter for Node.js applications.
- * It supports various strategies and can be adapted to different storage backends.
+ * This class is not meant to be instantiated directly.
+ * Use the `createRateLimiter` factory function instead.
+ * @internal
  */
-export class RateLimiter {
+export class RateLimiter implements RateLimiterInstance {
     private readonly strategy: RateLimitStrategy
+    private readonly storage: Storage
     private readonly onError: 'allow' | 'deny' | 'throw'
-    private readonly limit: number // Needed for fallback in handleStorageError
 
-    /**
-     * Creates a new `RateLimiter` instance.
-     *
-     * @param options - The options for the rate limiter.
-     */
-    constructor(options: RateLimiterOptions) {
+    constructor(options: InternalRateLimiterOptions) {
+        this.strategy = options.strategy
+        this.storage = options.storage
         this.onError = options.onError ?? 'deny'
-        this.limit = options.limit
-
-        if (typeof options.strategy === 'string') {
-            const prefix = options.prefix ?? 'ratelimit'
-            switch (options.strategy) {
-                case 'fixed-window':
-                    this.strategy = new FixedWindowStrategy(
-                        options.storage,
-                        options.windowMs,
-                        options.limit,
-                        prefix
-                    )
-                    break
-                case 'sliding-window':
-                    this.strategy = new SlidingWindowStrategy(
-                        options.storage,
-                        options.windowMs,
-                        options.limit,
-                        prefix
-                    )
-                    break
-                default:
-                    throw new Error(
-                        `Unknown built-in strategy: ${options.strategy}`
-                    )
-            }
-        } else {
-            // TODO: strategy must be a factory function that takes storage, windowMs, limit, and prefix as arguments and returns a RateLimitStrategy instance
-            this.strategy = options.strategy
-        }
     }
 
     /**
@@ -115,43 +62,38 @@ export class RateLimiter {
             console.error('Rate limiter storage error:', error)
             switch (this.onError) {
                 case 'allow':
-                    // Allow the request if the storage is down, providing the configured limit as remaining.
+                    // If the storage is down, allow the request.
                     return {
                         allowed: true,
-                        remaining: this.limit,
-                        reset: Date.now(),
+                        limit: -1,
+                        remaining: -1,
+                        reset: -1,
                     }
                 case 'throw':
                     throw error
                 case 'deny':
                 default:
-                    // Deny the request if the storage is down
-                    return { allowed: false, remaining: 0, reset: Date.now() }
+                    // If the storage is down, deny the request.
+                    return {
+                        allowed: false,
+                        limit: -1,
+                        remaining: -1,
+                        reset: -1,
+                    }
             }
         }
     }
 
     /**
-     * Checks and registers a hit for a given identifier.
-     * This is the primary method to be called for each request.
+     * Consumes a point for a given identifier.
+     * This is the primary method to be called for each request to be rate-limited.
      *
      * @param identifier A unique string identifying the client (e.g., IP address).
      * @returns A promise that resolves to a `RateLimiterResult`.
      */
-    async hit(identifier: string): Promise<RateLimiterResult> {
+    async consume(identifier: string): Promise<RateLimiterResult> {
         return this.handleStorageError(
-            this.strategy.limit(identifier)
+            this.strategy.limit(identifier, this.storage)
         ) as Promise<RateLimiterResult>
-    }
-
-    /**
-     * An alias for the `hit` method.
-     *
-     * @param identifier A unique string identifying the client (e.g., IP address).
-     * @returns A promise that resolves to a `RateLimiterResult`.
-     * @see hit
-     */
-    async isAllowed(identifier: string): Promise<RateLimiterResult> {
-        return this.hit(identifier)
     }
 }

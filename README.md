@@ -1,127 +1,172 @@
-# Next Limit [![Version](https://img.shields.io/npm/v/next-limit.svg)](https://www.npmjs.com/package/next-limit) [**Docs**](./docs/README.md)
+# Next Limit [![Version](https://img.shields.io/npm/v/next-limit.svg)](https://www.npmjs.com/package/next-limit)
 
-**`next-limit`** is a lightweight and flexible TypeScript library for rate limiting. It's designed to work with or without a framework (Express, Fastify) and supports both in-memory and Redis storage.
+`next-limit` is a modern, flexible, and high-performance rate limiting library for Node.js applications. It supports multiple rate limiting strategies and storage backends, making it suitable for both small and large-scale applications.
 
-*   **Light & Fast**: No heavy dependencies.
-*   **Flexible**: Choose between `fixed-window` and `sliding-window` strategies.
-*   **Multiple Storage**: In-memory for development, Redis for production.
-*   **Framework Ready**: Includes middlewares for Express and Fastify.
-*   **100% TypeScript**: Full typing for safe development.
-*   **Well Tested**: High test coverage, including with Redis.
+## Features
 
-* * *
-
-Why `next-limit`?
------------------
-
-*   **Easy to Use**: Get started quickly with minimal setup.
-*   **Powerful**: Handles distributed environments with Redis.
-*   **Safe**: Configurable error handling for storage backends.
-*   **Extensible**: `StorageAdapter` interface to plug in other backends.
-
-* * *
+- **Factory-Based API**: Simple and intuitive API for creating rate limiters.
+- **Multiple Strategies**: Comes with Fixed Window and Sliding Window strategies.
+- **Multiple Storages**: Supports in-memory and Redis storage.
+- **Framework Agnostic**: Can be used with any Node.js framework.
+- **Middleware Included**: Ready-to-use middlewares for Express and Fastify.
 
 ## Installation
 
 ```bash
-pnpm install next-limit
+npm install next-limit
 ```
 
-## Usage
+For Redis storage, you also need to install `redis`:
 
-### With Redis
-
-```javascript
-import { RateLimiter, createRedisStorage } from 'next-limit';
-import { createClient } from 'redis';
-
-const redisClient = createClient();
-redisClient.connect();
-
-const limiter = new RateLimiter({
-  storage: createRedisStorage(redisClient),
-  strategy: 'sliding-window',
-  windowMs: 60 * 1000, // 60 seconds
-  limit: 10, // 10 requests max
-});
+```bash
+npm install redis
 ```
 
-### With In-Memory Storage
+## Basic Usage
 
-```javascript
-import { RateLimiter, createMemoryStorage } from 'next-limit';
+Here's a simple example using the Fixed Window strategy with in-memory storage.
 
-const limiter = new RateLimiter({
-  storage: createMemoryStorage(),
-  strategy: 'sliding-window',
-  windowMs: 60 * 1000, // 60 seconds
-  limit: 10, // 10 requests max
-});
+```typescript
+import {
+    createRateLimiter,
+    createFixedWindowStrategy,
+    createMemoryStorage,
+} from 'next-limit'
+
+// 1. Create a storage adapter
+const storage = createMemoryStorage()
+
+// 2. Create a rate limiting strategy
+const strategy = createFixedWindowStrategy({ windowMs: 60000, limit: 100 })
+
+// 3. Create the rate limiter instance
+const limiter = createRateLimiter({ strategy, storage })
+
+async function handleRequest(userId: string) {
+    const result = await limiter.consume(userId)
+
+    if (result.allowed) {
+        console.log(`Request allowed. Remaining: ${result.remaining}`)
+    } else {
+        console.log(
+            `Request denied. Try again in ${result.reset ? Math.ceil((result.reset - Date.now()) / 1000) : 0} seconds.`
+        )
+    }
+}
+
+handleRequest('user-123')
 ```
 
-### Express Middleware
+## Usage with Redis
 
-```javascript
-import { expressMiddleware } from 'next-limit';
+For production environments, using Redis is recommended. `next-limit` uses efficient Lua scripts for atomic operations.
 
-app.use('/api/', expressMiddleware({ limiter }));
+```typescript
+import {
+    createRateLimiter,
+    createSlidingWindowStrategy,
+    createRedisStorage,
+} from 'next-limit'
+import Redis from 'redis'
+
+// 1. Create a Redis client
+const redisClient = new Redis()
+
+// 2. Create a Redis storage adapter
+const storage = createRedisStorage(redisClient)
+
+// 3. Create a sliding window strategy
+const strategy = createSlidingWindowStrategy({ windowMs: 60000, limit: 100 })
+
+// 4. Create the rate limiter
+const limiter = createRateLimiter({ strategy, storage })
+
+// Now use the limiter as in the basic example
+// await limiter.consume(identifier);
 ```
 
-### Using a Custom Strategy
+## Middleware
 
-For more advanced use cases, you can provide your own strategy by implementing the `RateLimitStrategy` interface.
+### Express
 
-```javascript
-import { RateLimiter, RateLimitStrategy, RateLimiterResult } from 'next-limit';
+```typescript
+import express from 'express'
+import {
+    expressMiddleware,
+    createRateLimiter,
+    createFixedWindowStrategy,
+    createMemoryStorage,
+} from 'next-limit'
 
-const myCustomStrategy: RateLimitStrategy = {
-  async limit(identifier) {
-    // ... your custom logic here
-    return { allowed: true, remaining: 10, reset: Date.now() + 1000 };
-  },
-};
+const app = express()
 
-const limiter = new RateLimiter({
-  storage: createMemoryStorage(),
-  strategy: myCustomStrategy,
-  windowMs: 60 * 1000,
-  limit: 10,
-});
+const storage = createMemoryStorage()
+const strategy = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
+const limiter = createRateLimiter({ strategy, storage })
+
+app.use(expressMiddleware(limiter))
+
+app.get('/', (req, res) => {
+    res.send('Hello, world!')
+})
+
+app.listen(3000)
 ```
 
-### Fastify Middleware
+### Fastify
 
-```javascript
-import { fastifyMiddleware } from 'next-limit';
+```typescript
+import fastify from 'fastify'
+import {
+    fastifyMiddleware,
+    createRateLimiter,
+    createFixedWindowStrategy,
+    createMemoryStorage,
+} from 'next-limit'
 
-app.addHook('onRequest', fastifyMiddleware({ limiter }));
+const app = fastify()
+
+const storage = createMemoryStorage()
+const strategy = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
+const limiter = createRateLimiter({ strategy, storage })
+
+app.addHook('onRequest', fastifyMiddleware(limiter))
+
+app.get('/', async (request, reply) => {
+    return { hello: 'world' }
+})
+
+app.listen({ port: 3000 })
 ```
 
+## API Reference
 
-## Configuration
+### `createRateLimiter(options)`
 
-| Option     | Type                               | Description                                      |
-| :--------- | :--------------------------------- | :----------------------------------------------- |
-| `storage`  | `StorageAdapter`                   | An instance of a storage adapter.                |
-| `strategy` | `'sliding-window'` \| `'fixed-window'` \| `RateLimitStrategy` | The name of a built-in strategy or a custom strategy instance. |
-| `windowMs` | `number`                           | The time window in milliseconds.                 |
-| `limit`    | `number`                           | The maximum number of requests in the window.    |
-| `prefix`   | `string`                           | The prefix for Redis keys. Defaults to `ratelimit`. |
-| `onError`  | `'allow'` \| `'deny'` \| `'throw'`      | How to handle Redis errors. Defaults to `deny`.  |
+- `options.strategy`: The rate limiting strategy to use.
+- `options.storage`: The storage adapter to use.
+- `options.onError`: Policy for handling storage errors (`'deny'`, `'allow'`, `'throw'`). Defaults to `'deny'`.
 
-## Strategies
+### `createFixedWindowStrategy(options)`
 
-- **`sliding-window` (default):** A precise strategy that uses a sliding window of time. This is recommended for most use cases.
-- **`fixed-window`:** A simpler strategy that uses a fixed window of time. This is less precise but more performant.
+- `options.windowMs`: The time window in milliseconds.
+- `options.limit`: The maximum number of requests allowed in the window.
+- `options.prefix` (optional): A prefix for storage keys.
 
-## Error Handling
+### `createSlidingWindowStrategy(options)`
 
-If Redis is unavailable, you can configure how `next-limit` behaves:
+- `options.windowMs`: The time window in milliseconds.
+- `options.limit`: The maximum number of requests allowed in the window.
+- `options.prefix` (optional): A prefix for storage keys.
 
-- **`allow`:** Allow all requests.
-- **`deny` (default):** Deny all requests.
-- **`throw`:** Throw an error.
+### `limiter.consume(identifier)`
 
+- `identifier`: A unique string to identify the user (e.g., IP address, user ID).
+- Returns a `Promise<RateLimiterResult>`:
+    - `allowed`: `boolean`
+    - `remaining`: `number | undefined`
+    - `reset`: `number | undefined` (timestamp in ms)
+    
 Documentation
 -------------
 

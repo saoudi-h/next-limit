@@ -8,11 +8,11 @@
 
 > **fastifyMiddleware**(`limiter`): (`request`, `reply`) => `Promise`\<`void`\>
 
-Defined in: [middleware/fastify.ts:40](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/middleware/fastify.ts#L40)
+Defined in: [middleware/fastify.ts:42](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/middleware/fastify.ts#L42)
 
 Creates a rate limiting hook for Fastify applications.
 
-This function is a factory that takes a `RateLimiter` instance and returns
+This function is a factory that takes a `RateLimiterInstance` and returns
 a Fastify `preHandler` hook. The hook automatically uses the request's IP address
 (`request.ip`) as the identifier for rate limiting.
 
@@ -20,9 +20,9 @@ a Fastify `preHandler` hook. The hook automatically uses the request's IP addres
 
 ### limiter
 
-[`RateLimiter`](../classes/RateLimiter.md)
+[`RateLimiterInstance`](../interfaces/RateLimiterInstance.md)
 
-An instance of the `RateLimiter` configured with the desired strategy and limits.
+An instance of the `RateLimiterInstance` created with `createRateLimiter`.
 
 ## Returns
 
@@ -48,16 +48,18 @@ A Fastify `preHandler` hook function.
 
 ```typescript
 import fastify from 'fastify';
-import { RateLimiter } from 'next-limit';
-import { fastifyMiddleware } from 'next-limit/middleware';
-import { MemoryStorageAdapter } from 'next-limit/storage';
+import {
+  createRateLimiter,
+  createMemoryStorage,
+  createFixedWindowStrategy,
+  fastifyMiddleware
+} from 'next-limit';
 
 const app = fastify();
 
-const limiter = new RateLimiter({
-  storage: new MemoryStorageAdapter(),
-  windowMs: 60 * 1000, // 1 minute
-  limit: 100, // 100 requests per minute
+const storage = createMemoryStorage();
+const limiter = createRateLimiter({
+  strategy: createFixedWindowStrategy({ windowMs: 60 * 1000, limit: 100 }, storage)
 });
 
 app.addHook('preHandler', fastifyMiddleware(limiter));

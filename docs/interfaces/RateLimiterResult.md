@@ -6,11 +6,9 @@
 
 # Interface: RateLimiterResult
 
-Defined in: [core/strategy.ts:12](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/strategy.ts#L12)
+Defined in: [core/strategy.ts:12](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L12)
 
 Represents the result of a rate limit check.
-This object provides information about whether the request was allowed,
-how many requests are remaining, and when the limit will reset.
 
 ## Properties
 
@@ -18,10 +16,15 @@ how many requests are remaining, and when the limit will reset.
 
 > **allowed**: `boolean`
 
-Defined in: [core/strategy.ts:17](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/strategy.ts#L17)
+Defined in: [core/strategy.ts:13](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L13)
 
-A boolean indicating whether the request is permitted.
-`true` if the request is within the limit, `false` otherwise.
+***
+
+### limit
+
+> **limit**: `number`
+
+Defined in: [core/strategy.ts:14](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L14)
 
 ***
 
@@ -29,9 +32,7 @@ A boolean indicating whether the request is permitted.
 
 > **remaining**: `number`
 
-Defined in: [core/strategy.ts:21](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/strategy.ts#L21)
-
-The number of requests left that can be made in the current time window.
+Defined in: [core/strategy.ts:15](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L15)
 
 ***
 
@@ -39,7 +40,4 @@ The number of requests left that can be made in the current time window.
 
 > **reset**: `number`
 
-Defined in: [core/strategy.ts:26](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/core/strategy.ts#L26)
-
-The timestamp (in milliseconds since the Unix epoch) when the rate limit window will reset.
-A client can use this to know when to retry a request.
+Defined in: [core/strategy.ts:16](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L16)

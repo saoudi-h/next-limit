@@ -1,17 +1,14 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import type { Request, Response, NextFunction } from 'express'
 import { expressMiddleware } from '../../src/middleware/express'
-import { RateLimiter } from '../../src/core/rate-limiter'
+import { RateLimiterInstance } from '../../src/core/rate-limiter'
 import { RateLimiterResult } from '../../src/core/strategy'
-
-// Mock the entire RateLimiter class to control its instances
-vi.mock('../../src/core/rate-limiter')
 
 describe('Express Middleware', () => {
     let mockReq: Partial<Request>
     let mockRes: Partial<Response>
     let mockNext: NextFunction
-    let mockLimiterInstance: RateLimiter
+    let mockLimiterInstance: RateLimiterInstance
 
     beforeEach(() => {
         // Reset mocks before each test
@@ -29,18 +26,16 @@ describe('Express Middleware', () => {
 
         mockNext = vi.fn()
 
-        // Create a mock instance that satisfies the RateLimiter type for the test
+        // Create a mock instance that satisfies the RateLimiterInstance type
         mockLimiterInstance = {
-            isAllowed: vi.fn(),
-        } as unknown as RateLimiter
+            consume: vi.fn(),
+        }
     })
 
     it('should call next() if the request is allowed', async () => {
         // Arrange
-        ;(mockLimiterInstance.isAllowed as Mock).mockResolvedValue({
+        ;(mockLimiterInstance.consume as Mock).mockResolvedValue({
             allowed: true,
-            remaining: 9,
-            reset: 0,
         })
         const middleware = expressMiddleware({ limiter: mockLimiterInstance })
 
@@ -48,20 +43,21 @@ describe('Express Middleware', () => {
         await middleware(mockReq as Request, mockRes as Response, mockNext)
 
         // Assert
-        expect(mockLimiterInstance.isAllowed).toHaveBeenCalledWith('127.0.0.1')
+        expect(mockLimiterInstance.consume).toHaveBeenCalledWith('127.0.0.1')
         expect(mockNext).toHaveBeenCalledTimes(1)
         expect(mockRes.status).not.toHaveBeenCalled()
     })
 
-    it('should send a 429 response if the request is denied', async () => {
+    it('should send a 429 response and set all headers if the request is denied', async () => {
         // Arrange
         const resetTime = Date.now() + 60000
         const result: RateLimiterResult = {
             allowed: false,
-            remaining: 0,
             reset: resetTime,
+            limit: 10,
+            remaining: 0,
         }
-        ;(mockLimiterInstance.isAllowed as Mock).mockResolvedValue(result)
+        ;(mockLimiterInstance.consume as Mock).mockResolvedValue(result)
         const middleware = expressMiddleware({ limiter: mockLimiterInstance })
 
         // Act
@@ -69,17 +65,40 @@ describe('Express Middleware', () => {
 
         // Assert
         expect(mockNext).not.toHaveBeenCalled()
+        expect(mockRes.setHeader).toHaveBeenCalledWith(
+            'X-RateLimit-Limit',
+            '10'
+        )
+        expect(mockRes.setHeader).toHaveBeenCalledWith(
+            'X-RateLimit-Remaining',
+            '0'
+        )
+        expect(mockRes.setHeader).toHaveBeenCalledWith('Retry-After', '60')
         expect(mockRes.status).toHaveBeenCalledWith(429)
         expect(mockRes.send).toHaveBeenCalledWith('Too Many Requests')
-        expect(mockRes.setHeader).toHaveBeenCalledWith('Retry-After', '60')
+    })
+
+    it('should not set Retry-After header if reset is not available', async () => {
+        // Arrange
+        const result: RateLimiterResult = { allowed: false } // No reset time
+        ;(mockLimiterInstance.consume as Mock).mockResolvedValue(result)
+        const middleware = expressMiddleware({ limiter: mockLimiterInstance })
+
+        // Act
+        await middleware(mockReq as Request, mockRes as Response, mockNext)
+
+        // Assert
+        expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+            'Retry-After',
+            expect.anything()
+        )
+        expect(mockRes.status).toHaveBeenCalledWith(429)
     })
 
     it('should use a custom identifier function if provided', async () => {
         // Arrange
-        ;(mockLimiterInstance.isAllowed as Mock).mockResolvedValue({
+        ;(mockLimiterInstance.consume as Mock).mockResolvedValue({
             allowed: true,
-            remaining: 9,
-            reset: 0,
         })
         mockReq.headers = { 'x-user-id': 'user-123' }
         const identifier = (req: Request) => req.headers['x-user-id'] as string
@@ -92,19 +111,15 @@ describe('Express Middleware', () => {
         await middleware(mockReq as Request, mockRes as Response, mockNext)
 
         // Assert
-        expect(mockLimiterInstance.isAllowed).toHaveBeenCalledWith('user-123')
+        expect(mockLimiterInstance.consume).toHaveBeenCalledWith('user-123')
         expect(mockNext).toHaveBeenCalledTimes(1)
     })
 
     it('should call a custom onDeny function if provided', async () => {
         // Arrange
         const onDeny = vi.fn()
-        const result: RateLimiterResult = {
-            allowed: false,
-            remaining: 0,
-            reset: Date.now(),
-        }
-        ;(mockLimiterInstance.isAllowed as Mock).mockResolvedValue(result)
+        const result: RateLimiterResult = { allowed: false }
+        ;(mockLimiterInstance.consume as Mock).mockResolvedValue(result)
         const middleware = expressMiddleware({
             limiter: mockLimiterInstance,
             onDeny,
@@ -115,7 +130,7 @@ describe('Express Middleware', () => {
 
         // Assert
         expect(onDeny).toHaveBeenCalledWith(result, mockReq, mockRes, mockNext)
-        expect(mockRes.status).not.toHaveBeenCalled() // onDeny is now responsible for the response
+        expect(mockRes.status).not.toHaveBeenCalled() // onDeny is now responsible
         expect(mockNext).not.toHaveBeenCalled()
     })
 })

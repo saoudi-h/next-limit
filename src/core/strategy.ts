@@ -1,42 +1,143 @@
 /**
- * @file Defines the core interfaces for rate limiting strategies.
- * This file specifies the contract that all rate limiting algorithms must follow,
- * as well as the structure of the result they must return.
+ * @file Defines the core interfaces and implementations for rate limiting strategies.
  */
+
+import { RedisClientType } from 'redis'
+import { slidingWindow } from '../scripts'
+import { RedisStorage, Storage } from './storage'
 
 /**
  * Represents the result of a rate limit check.
- * This object provides information about whether the request was allowed,
- * how many requests are remaining, and when the limit will reset.
  */
 export interface RateLimiterResult {
-    /**
-     * A boolean indicating whether the request is permitted.
-     * `true` if the request is within the limit, `false` otherwise.
-     */
     allowed: boolean
-    /**
-     * The number of requests left that can be made in the current time window.
-     */
+    limit: number
     remaining: number
-    /**
-     * The timestamp (in milliseconds since the Unix epoch) when the rate limit window will reset.
-     * A client can use this to know when to retry a request.
-     */
     reset: number
 }
 
 /**
  * Defines the contract for a rate limiting strategy.
- * A strategy encapsulates a specific algorithm (e.g., fixed-window, sliding-window)
- * for deciding whether to allow or deny a request based on its identifier.
  */
 export interface RateLimitStrategy {
-    /**
-     * Applies the rate limiting logic for a given identifier.
-     *
-     * @param identifier A unique string identifying the client making the request (e.g., an IP address or user ID).
-     * @returns A promise that resolves to a `RateLimiterResult` object containing the outcome of the check.
-     */
-    limit(identifier: string): Promise<RateLimiterResult>
+    limit(identifier: string, storage: Storage): Promise<RateLimiterResult>
+}
+
+/**
+ * Implements the Fixed Window rate limiting strategy using a generic storage backend.
+ */
+export class FixedWindowStrategy implements RateLimitStrategy {
+    constructor(
+        private windowMs: number,
+        private requestLimit: number,
+        private prefix: string
+    ) {}
+
+    async limit(
+        identifier: string,
+        storage: Storage
+    ): Promise<RateLimiterResult> {
+        const key = `${this.prefix}:fixed-window:${identifier}`
+        const now = Date.now()
+
+        const count = await storage.increment(key, this.windowMs)
+        const allowed = count <= this.requestLimit
+        const remaining = allowed ? this.requestLimit - count : 0
+
+        return {
+            allowed,
+            limit: this.requestLimit,
+            remaining: Math.max(0, remaining),
+            reset: now + this.windowMs,
+        }
+    }
+}
+
+/**
+ * Implements the Sliding Window rate limiting strategy using a generic storage backend.
+ */
+export class SlidingWindowStrategy implements RateLimitStrategy {
+    constructor(
+        private windowMs: number,
+        private requestLimit: number,
+        private prefix: string
+    ) {}
+
+    async limit(
+        identifier: string,
+        storage: Storage
+    ): Promise<RateLimiterResult> {
+        const key = `${this.prefix}:sliding-window:${identifier}`
+        const now = Date.now()
+        const random = Math.random().toString(36).slice(2)
+
+        // If using Redis, leverage the optimized Lua script for atomicity.
+        if (storage instanceof RedisStorage) {
+            return this.limitWithLuaScript(key, now, random, storage)
+        }
+
+        // For other storage types (like in-memory), perform operations sequentially.
+        // This is acceptable for single-threaded environments like Node.js.
+        const windowStart = now - this.windowMs
+        await storage.zRemoveRangeByScore(key, 0, windowStart)
+        const currentRequests = await storage.zCount(key)
+
+        if (currentRequests >= this.requestLimit) {
+            const oldestRequests = await storage.zRangeWithScores(key, 0, 0)
+            const resetTime = (oldestRequests[0]?.score || now) + this.windowMs
+            return {
+                allowed: false,
+                remaining: 0,
+                reset: resetTime,
+                limit: this.requestLimit,
+            }
+        }
+
+        await storage.zAdd(key, now, `${now}:${random}`)
+        await storage.expire(key, this.windowMs)
+
+        const remaining = this.requestLimit - (currentRequests + 1)
+        const oldestRequests = await storage.zRangeWithScores(key, 0, 0)
+        const resetTime = (oldestRequests[0]?.score || now) + this.windowMs
+
+        return {
+            allowed: true,
+            remaining,
+            reset: resetTime,
+            limit: this.requestLimit,
+        }
+    }
+
+    private async limitWithLuaScript(
+        key: string,
+        now: number,
+        random: string,
+        storage: Storage
+    ): Promise<RateLimiterResult> {
+        // The RedisStorage instance is cast to `any` to access the private `redis` property.
+        // This is a controlled way to access the underlying client for script execution.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const redis = (storage as any).redis as RedisClientType
+        const rawResult = await redis.eval(slidingWindow, {
+            keys: [key],
+            arguments: [
+                now.toString(),
+                this.windowMs.toString(),
+                this.requestLimit.toString(),
+                random,
+            ],
+        })
+
+        const [allowed, remaining, reset] = rawResult as [
+            number,
+            number,
+            number,
+        ]
+        return {
+            allowed: Boolean(allowed),
+            remaining,
+            reset,
+            limit: this.requestLimit,
+        }
+    }
 }

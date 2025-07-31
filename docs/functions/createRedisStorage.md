@@ -6,11 +6,11 @@
 
 # Function: createRedisStorage()
 
-> **createRedisStorage**(`redis`): [`StorageAdapter`](../interfaces/StorageAdapter.md)
+> **createRedisStorage**(`redis`): `Storage`
 
-Defined in: [helpers.ts:26](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/helpers.ts#L26)
+Defined in: [factories.ts:122](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/factories.ts#L122)
 
-Creates a new `RedisStorageAdapter` instance.
+Creates a `RedisStorage` instance.
 
 ## Parameters
 
@@ -18,21 +18,10 @@ Creates a new `RedisStorageAdapter` instance.
 
 `RedisClientType`
 
-An initialized and connected `RedisClientType` instance from the `redis` package.
+An initialized and connected `RedisClientType` instance.
 
 ## Returns
 
-[`StorageAdapter`](../interfaces/StorageAdapter.md)
+`Storage`
 
-A new instance of `RedisStorageAdapter`.
-
-## Example
-
-```typescript
-import { createClient } from 'redis';
-import { createRedisStorage } from 'next-limit';
-
-const redisClient = createClient();
-await redisClient.connect();
-const storage = createRedisStorage(redisClient);
-```
+A configured instance of `RedisStorage`.

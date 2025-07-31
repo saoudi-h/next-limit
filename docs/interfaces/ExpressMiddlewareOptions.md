@@ -6,7 +6,7 @@
 
 # Interface: ExpressMiddlewareOptions
 
-Defined in: [middleware/express.ts:12](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/middleware/express.ts#L12)
+Defined in: [middleware/express.ts:12](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/middleware/express.ts#L12)
 
 Configuration options for the Express middleware.
 
@@ -16,7 +16,7 @@ Configuration options for the Express middleware.
 
 > `optional` **identifier**: (`req`) => `string`
 
-Defined in: [middleware/express.ts:23](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/middleware/express.ts#L23)
+Defined in: [middleware/express.ts:24](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/middleware/express.ts#L24)
 
 A function to generate a unique identifier for a request.
 Defaults to using `req.ip`.
@@ -39,11 +39,12 @@ A string identifier.
 
 ### limiter
 
-> **limiter**: [`RateLimiter`](../classes/RateLimiter.md)
+> **limiter**: [`RateLimiterInstance`](RateLimiterInstance.md)
 
-Defined in: [middleware/express.ts:16](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/middleware/express.ts#L16)
+Defined in: [middleware/express.ts:17](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/middleware/express.ts#L17)
 
-The `RateLimiter` instance to use for checking requests.
+The `RateLimiterInstance` to use for checking requests.
+This should be created using the `createRateLimiter` factory.
 
 ***
 
@@ -51,7 +52,7 @@ The `RateLimiter` instance to use for checking requests.
 
 > `optional` **onDeny**: (`result`, `req`, `res`, `next`) => `void`
 
-Defined in: [middleware/express.ts:32](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/middleware/express.ts#L32)
+Defined in: [middleware/express.ts:33](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/middleware/express.ts#L33)
 
 A function to execute when a request is denied.
 If not provided, a default 429 response is sent.

@@ -6,22 +6,15 @@
 
 # Function: createMemoryStorage()
 
-> **createMemoryStorage**(): [`StorageAdapter`](../interfaces/StorageAdapter.md)
+> **createMemoryStorage**(): `Storage`
 
-Defined in: [helpers.ts:41](https://github.com/saoudi-h/next-limit/blob/657cd4412856737cdc75b96e50f263c52d81c8f9/src/helpers.ts#L41)
+Defined in: [factories.ts:132](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/factories.ts#L132)
 
-Creates a new `MemoryStorageAdapter` instance.
+Creates a `MemoryStorage` instance.
+Useful for testing or single-process applications.
 
 ## Returns
 
-[`StorageAdapter`](../interfaces/StorageAdapter.md)
+`Storage`
 
-A new instance of `MemoryStorageAdapter`.
-
-## Example
-
-```typescript
-import { createMemoryStorage } from 'next-limit';
-
-const storage = createMemoryStorage();
-```
+A configured instance of `MemoryStorage`.

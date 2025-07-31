@@ -2,7 +2,7 @@
  * @file Provides a middleware for the Express web framework.
  */
 
-import { RateLimiter } from '../core/rate-limiter'
+import { RateLimiterInstance } from '../core/rate-limiter'
 import { Request, Response, NextFunction } from 'express'
 import { RateLimiterResult } from '../core/strategy'
 
@@ -11,9 +11,10 @@ import { RateLimiterResult } from '../core/strategy'
  */
 export interface ExpressMiddlewareOptions {
     /**
-     * The `RateLimiter` instance to use for checking requests.
+     * The `RateLimiterInstance` to use for checking requests.
+     * This should be created using the `createRateLimiter` factory.
      */
-    limiter: RateLimiter
+    limiter: RateLimiterInstance
     /**
      * A function to generate a unique identifier for a request.
      * Defaults to using `req.ip`.
@@ -48,7 +49,15 @@ export const expressMiddleware = (options: ExpressMiddlewareOptions) => {
 
     return async (req: Request, res: Response, next: NextFunction) => {
         const clientId = identifier ? identifier(req) : (req.ip ?? '')
-        const result = await limiter.isAllowed(clientId)
+        const result = await limiter.consume(clientId)
+
+        // Set rate limit headers
+        if (result.limit) {
+            res.setHeader('X-RateLimit-Limit', String(result.limit))
+        }
+        if (typeof result.remaining === 'number') {
+            res.setHeader('X-RateLimit-Remaining', String(result.remaining))
+        }
 
         if (result.allowed) {
             return next()
@@ -57,10 +66,15 @@ export const expressMiddleware = (options: ExpressMiddlewareOptions) => {
         if (onDeny) {
             onDeny(result, req, res, next)
         } else {
-            const retryAfterSeconds = Math.ceil(
-                (result.reset - Date.now()) / 1000
-            )
-            res.setHeader('Retry-After', String(retryAfterSeconds))
+            // Only set the Retry-After header if the reset time is available.
+            if (result.reset) {
+                const retryAfterSeconds = Math.ceil(
+                    (result.reset - Date.now()) / 1000
+                )
+                if (retryAfterSeconds > 0) {
+                    res.setHeader('Retry-After', String(retryAfterSeconds))
+                }
+            }
             res.status(429).send('Too Many Requests')
         }
     }

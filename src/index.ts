@@ -1,29 +1,31 @@
 /**
  * Entry point for the next-limit package.
- * This file exports the essential modules for consumers of the library.
+ * This file exports the public API for creating and using rate limiters.
  */
 
-// Core
-export { RateLimiter } from './core/rate-limiter'
+// --- Main Factory ---
+export { createRateLimiter } from './factories'
+export type { CreateRateLimiterOptions } from './factories'
+
+// --- Strategy Factories ---
+export {
+    createFixedWindowStrategy,
+    createSlidingWindowStrategy,
+} from './factories'
 export type {
-    RateLimiterOptions,
-    BuiltInStrategyName,
-} from './core/rate-limiter'
+    FixedWindowStrategyConfig,
+    SlidingWindowStrategyConfig,
+} from './factories'
+
+// --- Storage Factories ---
+export { createRedisStorage, createMemoryStorage } from './factories'
+
+// --- Core Types ---
+export type { RateLimiterInstance } from './core/rate-limiter'
 export type { RateLimiterResult, RateLimitStrategy } from './core/strategy'
 
-// Storage
-export type { StorageAdapter } from './core/storage'
-export { MemoryStorageAdapter } from './core/memory-storage-adapter'
-export { RedisStorageAdapter } from './core/redis-storage-adapter'
-
-// Strategies
-export { FixedWindowStrategy } from './strategies/fixed-window'
-export { SlidingWindowStrategy } from './strategies/sliding-window'
-
-// Helpers
-export { createRedisStorage, createMemoryStorage } from './helpers'
-
-// Middleware
+// --- Middleware ---
+// Note: Middlewares may need to be updated to align with the new factory-based API.
 export { expressMiddleware } from './middleware/express'
 export type { ExpressMiddlewareOptions } from './middleware/express'
 export { fastifyMiddleware } from './middleware/fastify'

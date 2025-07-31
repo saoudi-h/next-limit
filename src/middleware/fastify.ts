@@ -2,32 +2,34 @@
  * @file Provides a middleware (hook) for the Fastify web framework.
  */
 
-import { RateLimiter } from '../core/rate-limiter'
+import { RateLimiterInstance } from '../core/rate-limiter'
 import { FastifyRequest, FastifyReply } from 'fastify'
 
 /**
  * Creates a rate limiting hook for Fastify applications.
  *
- * This function is a factory that takes a `RateLimiter` instance and returns
+ * This function is a factory that takes a `RateLimiterInstance` and returns
  * a Fastify `preHandler` hook. The hook automatically uses the request's IP address
  * (`request.ip`) as the identifier for rate limiting.
  *
- * @param limiter An instance of the `RateLimiter` configured with the desired strategy and limits.
+ * @param limiter An instance of the `RateLimiterInstance` created with `createRateLimiter`.
  * @returns A Fastify `preHandler` hook function.
  *
  * @example
  * ```typescript
  * import fastify from 'fastify';
- * import { RateLimiter } from 'next-limit';
- * import { fastifyMiddleware } from 'next-limit/middleware';
- * import { MemoryStorageAdapter } from 'next-limit/storage';
+ * import {
+ *   createRateLimiter,
+ *   createMemoryStorage,
+ *   createFixedWindowStrategy,
+ *   fastifyMiddleware
+ * } from 'next-limit';
  *
  * const app = fastify();
  *
- * const limiter = new RateLimiter({
- *   storage: new MemoryStorageAdapter(),
- *   windowMs: 60 * 1000, // 1 minute
- *   limit: 100, // 100 requests per minute
+ * const storage = createMemoryStorage();
+ * const limiter = createRateLimiter({
+ *   strategy: createFixedWindowStrategy({ windowMs: 60 * 1000, limit: 100 }, storage)
  * });
  *
  * app.addHook('preHandler', fastifyMiddleware(limiter));
@@ -37,7 +39,7 @@ import { FastifyRequest, FastifyReply } from 'fastify'
  * });
  * ```
  */
-export const fastifyMiddleware = (limiter: RateLimiter) => {
+export const fastifyMiddleware = (limiter: RateLimiterInstance) => {
     /**
      * The actual hook function applied to incoming requests.
      * @param request The Fastify request object.
@@ -45,16 +47,24 @@ export const fastifyMiddleware = (limiter: RateLimiter) => {
      */
     return async (request: FastifyRequest, reply: FastifyReply) => {
         // Use the request's IP address as the identifier.
-        const result = await limiter.isAllowed(request.ip)
+        const result = await limiter.consume(request.ip)
 
         // If the request is not allowed, send a 429 Too Many Requests response.
         // The `return` statement prevents further handlers from being executed.
         if (!result.allowed) {
-            reply.status(429).send({
+            const response: { error: string; retryAfter?: number } = {
                 error: 'Too many requests',
-                // Calculate the time remaining until reset in milliseconds.
-                retryAfter: result.reset - Date.now(),
-            })
+            }
+
+            // Only include retryAfter if the reset time is available.
+            if (result.reset) {
+                const retryAfterMs = result.reset - Date.now()
+                if (retryAfterMs > 0) {
+                    response.retryAfter = retryAfterMs
+                }
+            }
+
+            reply.status(429).send(response)
             return
         }
 
