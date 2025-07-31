@@ -166,22 +166,19 @@ app.listen({ port: 3000 })
     - `allowed`: `boolean`
     - `remaining`: `number | undefined`
     - `reset`: `number | undefined` (timestamp in ms)
-    
-Documentation
--------------
+
+## Documentation
 
 For more detailed examples, advanced configuration, and the full API, see the [documentation](./docs/README.md) .
 
-* * *
+---
 
-License
--------
+## License
 
 `next-limit` is licensed under the MIT License.
 
-* * *
+---
 
-Contributing
-------------
+## Contributing
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.

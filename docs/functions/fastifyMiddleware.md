@@ -8,7 +8,7 @@
 
 > **fastifyMiddleware**(`limiter`): (`request`, `reply`) => `Promise`\<`void`\>
 
-Defined in: [middleware/fastify.ts:42](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/middleware/fastify.ts#L42)
+Defined in: [middleware/fastify.ts:42](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/middleware/fastify.ts#L42)
 
 Creates a rate limiting hook for Fastify applications.
 

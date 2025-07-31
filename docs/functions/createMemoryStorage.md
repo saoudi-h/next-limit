@@ -8,7 +8,7 @@
 
 > **createMemoryStorage**(): `Storage`
 
-Defined in: [factories.ts:132](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/factories.ts#L132)
+Defined in: [factories.ts:139](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/factories.ts#L139)
 
 Creates a `MemoryStorage` instance.
 Useful for testing or single-process applications.

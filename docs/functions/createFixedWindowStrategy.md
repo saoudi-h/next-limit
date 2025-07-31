@@ -6,9 +6,9 @@
 
 # Function: createFixedWindowStrategy()
 
-> **createFixedWindowStrategy**(`config`, `storage`): [`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
+> **createFixedWindowStrategy**(`config`): [`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
 
-Defined in: [factories.ts:50](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/factories.ts#L50)
+Defined in: [factories.ts:49](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/factories.ts#L49)
 
 Creates a `FixedWindowStrategy` instance.
 
@@ -19,12 +19,6 @@ Creates a `FixedWindowStrategy` instance.
 [`FixedWindowStrategyConfig`](../interfaces/FixedWindowStrategyConfig.md)
 
 The configuration for the fixed window strategy.
-
-### storage
-
-`Storage`
-
-The storage instance to use.
 
 ## Returns
 

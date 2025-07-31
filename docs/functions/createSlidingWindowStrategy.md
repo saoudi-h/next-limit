@@ -6,9 +6,9 @@
 
 # Function: createSlidingWindowStrategy()
 
-> **createSlidingWindowStrategy**(`config`, `storage`): [`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
+> **createSlidingWindowStrategy**(`config`): [`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
 
-Defined in: [factories.ts:69](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/factories.ts#L69)
+Defined in: [factories.ts:65](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/factories.ts#L65)
 
 Creates a `SlidingWindowStrategy` instance.
 
@@ -19,12 +19,6 @@ Creates a `SlidingWindowStrategy` instance.
 [`SlidingWindowStrategyConfig`](../interfaces/SlidingWindowStrategyConfig.md)
 
 The configuration for the sliding window strategy.
-
-### storage
-
-`Storage`
-
-The storage instance to use.
 
 ## Returns
 

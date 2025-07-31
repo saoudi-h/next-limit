@@ -6,7 +6,7 @@
 
 # Interface: RateLimiterResult
 
-Defined in: [core/strategy.ts:12](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L12)
+Defined in: [core/strategy.ts:12](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/core/strategy.ts#L12)
 
 Represents the result of a rate limit check.
 
@@ -16,7 +16,7 @@ Represents the result of a rate limit check.
 
 > **allowed**: `boolean`
 
-Defined in: [core/strategy.ts:13](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L13)
+Defined in: [core/strategy.ts:13](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/core/strategy.ts#L13)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [core/strategy.ts:13](https://github.com/saoudi-h/next-limit/blob/0c
 
 > **limit**: `number`
 
-Defined in: [core/strategy.ts:14](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L14)
+Defined in: [core/strategy.ts:14](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/core/strategy.ts#L14)
 
 ***
 
@@ -32,7 +32,7 @@ Defined in: [core/strategy.ts:14](https://github.com/saoudi-h/next-limit/blob/0c
 
 > **remaining**: `number`
 
-Defined in: [core/strategy.ts:15](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L15)
+Defined in: [core/strategy.ts:15](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/core/strategy.ts#L15)
 
 ***
 
@@ -40,4 +40,4 @@ Defined in: [core/strategy.ts:15](https://github.com/saoudi-h/next-limit/blob/0c
 
 > **reset**: `number`
 
-Defined in: [core/strategy.ts:16](https://github.com/saoudi-h/next-limit/blob/0c71c520c8e8fe01ea7d325a61c2d1bef8c2081a/src/core/strategy.ts#L16)
+Defined in: [core/strategy.ts:16](https://github.com/saoudi-h/next-limit/blob/e4a145e5bc3797945c61eb5f5c739ea59ac60269/src/core/strategy.ts#L16)
