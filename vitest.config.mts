@@ -25,7 +25,7 @@ export default defineConfig({
                 'eslint.config.mjs',
                 'prettier.config.mjs',
                 'typedoc.json',
-                'src/scripts/sliding-window.lua',
+                'src/scripts/*.lua',
                 'src/index.ts',
                 'node_modules/**',
                 'dist/**',

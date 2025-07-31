@@ -20,7 +20,9 @@
         "prepare": "pnpm build && pnpm husky",
         "prepublishOnly": "pnpm run test && pnpm run lint",
         "release": "semantic-release",
-        "build": "tsup src/index.ts --format cjs,esm --dts",
+        "build:lua": "tsx scripts/lua-minifier.ts",
+        "build:package": "tsup --config tsup.config.ts",
+        "build": "pnpm run build:lua && pnpm run build:package",
         "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
         "docker:up": "docker-compose --env-file .env.test -f docker-compose.test.yml up -d --wait",
         "docker:down": "docker-compose --env-file .env.test -f docker-compose.test.yml down",
@@ -67,7 +69,9 @@
         "node": ">=16.0.0"
     },
     "dependencies": {
-        "redis": "^5.6.1"
+        "next-limit": "link:../../.local/share/pnpm/global/5/node_modules/next-limit",
+        "redis": "^5.6.1",
+        "tsx": "^4.20.3"
     },
     "devDependencies": {
         "@eslint/js": "^9.32.0",
@@ -90,6 +94,7 @@
         "globals": "^16.3.0",
         "husky": "^9.1.7",
         "lint-staged": "^16.1.2",
+        "luamin": "^1.0.4",
         "prettier": "^3.6.2",
         "semantic-release": "^24.2.7",
         "tsup": "^8.0.2",
@@ -104,9 +109,6 @@
             "prettier --write --ignore-unknown",
             "eslint --fix"
         ]
-    },
-    "peerDependencies": {
-        "redis": "^4.0.0 || ^5.0.0"
     },
     "packageManager": "pnpm@10.13.1"
 }
