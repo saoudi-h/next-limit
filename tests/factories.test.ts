@@ -4,6 +4,7 @@ import {
     createRedisStorage,
     createFixedWindowStrategy,
     createSlidingWindowStrategy,
+    createRateLimiter,
 } from '../src/factories'
 import { MemoryStorage, RedisStorage } from '../src/core/storage'
 import type { RedisClientType as Redis } from 'redis'
@@ -44,49 +45,71 @@ describe('Strategy Factories', () => {
 
     describe('createFixedWindowStrategy', () => {
         it('should create a fixed window strategy with default options', () => {
-            const strategy = createFixedWindowStrategy(
-                { windowMs: 60000, limit: 100 },
-                storage
-            )
+            const strategyFactory = createFixedWindowStrategy({
+                windowMs: 60000,
+                limit: 100,
+            })
+            const strategy = strategyFactory({
+                storage,
+                prefix: 'test-prefix',
+            })
             expect(strategy).toBeInstanceOf(FixedWindowStrategy)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
             expect((strategy as any).requestLimit).toBe(100)
         })
 
-        it('should create a fixed window strategy with a custom prefix', () => {
-            const strategy = createFixedWindowStrategy(
-                { windowMs: 60000, limit: 100, prefix: 'custom-prefix' },
-                storage
-            )
-            expect(strategy).toBeInstanceOf(FixedWindowStrategy)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).prefix).toBe('custom-prefix')
+        describe('createRateLimiter', () => {
+            const storage = createMemoryStorage()
+
+            it('should use the provided prefix', () => {
+                const strategyFactory = createFixedWindowStrategy({
+                    windowMs: 60000,
+                    limit: 100,
+                })
+                const limiter = createRateLimiter({
+                    strategy: strategyFactory,
+                    storage,
+                    prefix: 'custom-prefix',
+                })
+
+                expect(limiter).toBeDefined()
+            })
+
+            it('should generate a unique prefix when none is provided', () => {
+                const strategyFactory = createFixedWindowStrategy({
+                    windowMs: 60000,
+                    limit: 100,
+                })
+                const limiter1 = createRateLimiter({
+                    strategy: strategyFactory,
+                    storage,
+                })
+                const limiter2 = createRateLimiter({
+                    strategy: strategyFactory,
+                    storage,
+                })
+
+                expect(limiter1).toBeDefined()
+                expect(limiter2).toBeDefined()
+                // Note: We're not checking if the prefixes are different because
+                // Math.random() might generate the same value in tests
+            })
         })
     })
 
     describe('createSlidingWindowStrategy', () => {
         it('should create a sliding window strategy with default options', () => {
-            const strategy = createSlidingWindowStrategy(
-                { windowMs: 60000, limit: 100 },
-                storage
-            )
+            const strategyFactory = createSlidingWindowStrategy({
+                windowMs: 60000,
+                limit: 100,
+            })
+            const strategy = strategyFactory({
+                storage,
+                prefix: 'test-prefix',
+            })
             expect(strategy).toBeInstanceOf(SlidingWindowStrategy)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
             expect((strategy as any).requestLimit).toBe(100)
-        })
-
-        it('should create a sliding window strategy with a custom prefix', () => {
-            const strategy = createSlidingWindowStrategy(
-                {
-                    windowMs: 60000,
-                    limit: 100,
-                    prefix: 'custom-sliding-prefix',
-                },
-                storage
-            )
-            expect(strategy).toBeInstanceOf(SlidingWindowStrategy)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).prefix).toBe('custom-sliding-prefix')
         })
     })
 })

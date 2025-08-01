@@ -37,12 +37,12 @@ describe('createRateLimiter', () => {
         ;(mockStrategy.limit as Mock).mockResolvedValue(successResult)
 
         const limiter = createRateLimiter({
-            strategy: mockStrategy,
+            strategy: () => mockStrategy,
             storage: mockStorage,
         })
         const result = await limiter.consume('user1')
 
-        expect(mockStrategy.limit).toHaveBeenCalledWith('user1', mockStorage)
+        expect(mockStrategy.limit).toHaveBeenCalledWith('user1')
         expect(result).toEqual(successResult)
     })
 
@@ -56,7 +56,7 @@ describe('createRateLimiter', () => {
         ;(mockStrategy.limit as Mock).mockResolvedValue(deniedResult)
 
         const limiter = createRateLimiter({
-            strategy: mockStrategy,
+            strategy: () => mockStrategy,
             storage: mockStorage,
         })
         const result = await limiter.consume('user1')
@@ -71,7 +71,7 @@ describe('createRateLimiter', () => {
             )
 
             const limiter = createRateLimiter({
-                strategy: mockStrategy,
+                strategy: () => mockStrategy,
                 storage: mockStorage,
             })
             const result = await limiter.consume('user1')
@@ -91,7 +91,7 @@ describe('createRateLimiter', () => {
             )
 
             const limiter = createRateLimiter({
-                strategy: mockStrategy,
+                strategy: () => mockStrategy,
                 storage: mockStorage,
                 onError: 'allow',
             })
@@ -113,13 +113,13 @@ describe('createRateLimiter', () => {
             }
 
             const limiter = createRateLimiter({
-                strategy,
+                strategy: () => strategy,
                 storage: mockStorage,
                 onError: 'throw',
             })
 
             await expect(limiter.consume('test')).rejects.toThrow(storageError)
-            expect(strategy.limit).toHaveBeenCalledWith('test', mockStorage)
+            expect(strategy.limit).toHaveBeenCalledWith('test')
         })
     })
 })
