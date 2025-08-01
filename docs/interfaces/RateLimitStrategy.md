@@ -6,7 +6,7 @@
 
 # Interface: RateLimitStrategy
 
-Defined in: [core/strategy.ts:25](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/core/strategy.ts#L25)
+Defined in: [src/core/strategy.ts:25](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/core/strategy.ts#L25)
 
 Defines the contract for a rate limiting strategy.
 
@@ -19,7 +19,7 @@ Each strategy defines how to handle rate limiting for a specific algorithm (e.g.
 
 > **limit**(`identifier`): `Promise`\<[`RateLimiterResult`](RateLimiterResult.md)\>
 
-Defined in: [core/strategy.ts:32](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/core/strategy.ts#L32)
+Defined in: [src/core/strategy.ts:32](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/core/strategy.ts#L32)
 
 Checks if a request is allowed based on the rate limiting rules.
 

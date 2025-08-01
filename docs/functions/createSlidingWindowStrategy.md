@@ -6,59 +6,38 @@
 
 # Function: createSlidingWindowStrategy()
 
-> **createSlidingWindowStrategy**(`config`): `StrategyFactory`\<[`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)\>
+> **createSlidingWindowStrategy**(`options`): [`StrategyFactory`](../interfaces/StrategyFactory.md)\<[`SlidingWindowStrategy`](../interfaces/SlidingWindowStrategy.md)\>
 
-Defined in: [factories.ts:155](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L155)
+Defined in: [src/factories.ts:172](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/factories.ts#L172)
 
-Creates a factory function for a `SlidingWindowStrategy` instance.
+Creates a factory function for sliding window rate limiting strategies.
 
-This function returns a factory that, when executed with a context containing
-storage and prefix, creates a new `SlidingWindowStrategy` instance.
+This strategy provides more accurate rate limiting by considering a rolling
+time window. It uses Redis sorted sets to track request timestamps and
+allows a maximum number of requests within any window of the specified duration.
 
 ## Parameters
 
-### config
+### options
 
-[`SlidingWindowStrategyConfig`](../interfaces/SlidingWindowStrategyConfig.md)
+[`WindowOptions`](../interfaces/WindowOptions.md)
 
-The configuration for the sliding window strategy.
+Configuration options for the sliding window strategy
 
 ## Returns
 
-`StrategyFactory`\<[`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)\>
+[`StrategyFactory`](../interfaces/StrategyFactory.md)\<[`SlidingWindowStrategy`](../interfaces/SlidingWindowStrategy.md)\>
 
-A factory function that creates a `SlidingWindowStrategy` instance.
+A factory function that creates SlidingWindowStrategy instances
 
-## Examples
-
-```typescript
-const strategyFactory = createSlidingWindowStrategy({
-  windowMs: 60000, // 1 minute
-  limit: 100,      // 100 requests per minute
-});
-
-const strategy = strategyFactory({
-  storage: createMemoryStorage(),
-  prefix: 'my-app'
-});
-```
+## Example
 
 ```typescript
-const strategyFactory = createSlidingWindowStrategy({
-  windowMs: "1m", // 1 minute
-  limit: 100,     // 100 requests per minute
+const createStrategy = createSlidingWindowStrategy({
+  windowMs: 60000, // 1 minute window
+  limit: 100       // Max 100 requests per window
 });
 
-const strategy = strategyFactory({
-  storage: createMemoryStorage(),
-  prefix: 'my-app'
-});
+// Later, with storage and prefix
+const strategy = createStrategy({ storage, prefix: 'rate-limit:' });
 ```
-
-## Throws
-
-Will throw an error if `windowMs` is not a valid positive number or a StringValue from `ms` (e.g., "1m", "1h").
-
-## See
-
-https://github.com/vercel/ms for more information on string format.

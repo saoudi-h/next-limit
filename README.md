@@ -31,6 +31,7 @@ import {
     createRateLimiter,
     createFixedWindowStrategy,
     createMemoryStorage,
+    RateLimiterResult
 } from 'next-limit'
 
 // 1. Create a storage adapter
@@ -38,20 +39,24 @@ const storage = createMemoryStorage()
 
 // 2. Create a rate limiting strategy factory
 const strategyFactory = createFixedWindowStrategy({
-    windowMs: '1m',
-    limit: 100,
+    windowMs: '1m',  // or 60000 for 60 seconds
+    limit: 100,      // 100 requests maximum per window
 })
 
 // 3. Create the rate limiter instance
-const limiter = createRateLimiter({ strategy: strategyFactory, storage })
+const limiter = createRateLimiter({
+    strategy: strategyFactory,
+    storage,
+    prefix: 'myapp:', // Optional: prefix for storage keys
+    onError: 'deny'   // Error policy: 'deny' (default), 'allow', or 'throw'
+})
 
 async function handleRequest(userId: string) {
     const result = await limiter.consume(userId)
-
     if (result.allowed) {
         console.log(`Request allowed. Remaining: ${result.remaining}`)
     } else {
-        console.log(
+        console.log()
             `Request denied. Try again in ${result.reset ? Math.ceil((result.reset - Date.now()) / 1000) : 0} seconds.`
         )
     }
@@ -69,31 +74,71 @@ import {
     createRateLimiter,
     createSlidingWindowStrategy,
     createRedisStorage,
+    RateLimiterResult
 } from 'next-limit'
 import { createClient } from 'redis'
 
-const url = 'redis://:password@localhost:6379'
-
 // 1. Create a Redis client
-const redisClient = await createClient({ url }).connect()
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
+const redisClient = createClient({
+    url: redisUrl,
+    // Other Redis configuration options...
+})
 
 // 2. Create a Redis storage adapter
-const storage = createRedisStorage(redisClient)
+const storage = createRedisStorage({
+    redis: redisClient,
+    keyPrefix: 'ratelimit:',  // Prefix for all keys
+    timeout: 5000,           // Timeout for Redis operations (ms)
+    autoConnect: true        // Automatically connect to the Redis client
+})
 
 // 3. Create a sliding window strategy factory
 const strategyFactory = createSlidingWindowStrategy({
-    windowMs: '1m',
-    limit: 100,
+    windowMs: '1m',  // One minute window
+    limit: 100,      // 100 requests maximum per window
 })
 
 // 4. Create the rate limiter
-const limiter = createRateLimiter({ strategy: strategyFactory, storage })
+const limiter = createRateLimiter({
+    strategy: strategyFactory,
+    storage,
+    prefix: 'api:',  // Prefix for this limiter's keys
+    onError: 'deny'  // Error policy
+})
 
-// Now use the limiter as in the basic example
-// await limiter.consume(identifier);
+// 5. Use the limiter
+async function handleApiRequest(apiKey: string) {
+    try {
+        const result: RateLimiterResult = await limiter.consume(apiKey)
+
+        if (!result.allowed) {
+            const retryAfter = Math.ceil((result.reset - Date.now()) / 1000)
+            return {
+                status: 429,
+                headers: {
+                    'Retry-After': retryAfter.toString(),
+                    'X-RateLimit-Limit': result.limit.toString(),
+                    'X-RateLimit-Remaining': result.remaining.toString(),
+                    'X-RateLimit-Reset': Math.ceil(result.reset / 1000).toString()
+                },
+                body: `Too many requests. Try again in ${retryAfter} seconds.`
+            }
+        }
+
+        // Process the API request...
+        return { status: 200, body: 'Request processed successfully' }
+    } catch (error) {
+        console.error('Rate limit error:', error)
+        return { status: 500, body: 'Internal server error' }
+    }
+}
+
+// Example usage with an API
+// await handleApiRequest('user-api-key-123')
 ```
 
-## Middleware
+## Middlewares
 
 ### Express
 
@@ -103,119 +148,302 @@ import {
     expressMiddleware,
     createRateLimiter,
     createFixedWindowStrategy,
-    createMemoryStorage,
+    createRedisStorage,
+    RateLimiterResult
 } from 'next-limit'
+import { createClient } from 'redis'
 
 const app = express()
 
-const storage = createMemoryStorage()
+// Configure Redis storage
+const redisClient = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+})
+
+const storage = createRedisStorage(redisClient)
+
+// Configure the strategy
 const strategyFactory = createFixedWindowStrategy({
-    windowMs: 60000,
-    limit: 10,
+    windowMs: '1m',  // 1 minute
+    limit: 100,      // 100 requests per minute
 })
-const limiter = createRateLimiter({ strategy: strategyFactory, storage })
 
-// Pass the limiter instance directly to the middleware
-app.use(expressMiddleware({ limiter }))
+// Create the rate limiter
+const limiter = createRateLimiter({
+    strategy: strategyFactory,
+    storage,
+    prefix: 'express:',
+    onError: 'deny'
+})
 
+// Express Middleware
+app.use(express.json())
+app.use(expressMiddleware({
+    limiter,
+    keyGenerator: (req) => {
+        // Customize the identifier key (default: req.ip)
+        return req.ip || 'unknown'
+    },
+    skip: (req) => {
+        // Ignore certain routes
+        return req.path === '/healthcheck'
+    },
+    handler: (req, res, next, result: RateLimiterResult) => {
+        // Customize the response on limit exceeded
+        res.status(429).json({
+            error: 'Too many requests',
+            retryAfter: Math.ceil((result.reset - Date.now()) / 1000),
+            limit: result.limit,
+            remaining: result.remaining,
+            reset: result.reset
+        })
+    }
+}))
+
+// Routes
 app.get('/', (req, res) => {
-    res.send('Hello, world!')
+    res.send('Welcome to our API')
 })
 
-app.listen(3000)
+app.get('/healthcheck', (req, res) => {
+    res.status(200).json({ status: 'ok' })
+})
+
+// Start the server
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`)
+})
 ```
 
 ### Fastify
 
 ```typescript
-import fastify from 'fastify'
+import fastify, { FastifyRequest, FastifyReply } from 'fastify'
 import {
     fastifyMiddleware,
     createRateLimiter,
-    createFixedWindowStrategy,
-    createMemoryStorage,
+    createSlidingWindowStrategy,
+    createRedisStorage,
+    RateLimiterResult
 } from 'next-limit'
+import { createClient } from 'redis'
 
-const app = fastify()
+const app = fastify({ logger: true })
 
-const storage = createMemoryStorage()
-const strategyFactory = createFixedWindowStrategy({
-    windowMs: 60000,
-    limit: 10,
-})
-const limiter = createRateLimiter({ strategy: strategyFactory, storage })
-
-// Pass the limiter instance directly to the middleware
-app.addHook('preHandler', fastifyMiddleware(limiter))
-
-app.get('/', async (request, reply) => {
-    return { hello: 'world' }
+// Configure Redis storage
+const redisClient = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
 })
 
-app.listen({ port: 3000 })
+const storage = createRedisStorage(redisClient)
+
+// Configure the strategy
+const strategyFactory = createSlidingWindowStrategy({
+    windowMs: '1m',  // 1 minute
+    limit: 100,      // 100 requests per minute
+})
+
+// Create the rate limiter
+const limiter = createRateLimiter({
+    strategy: strategyFactory,
+    storage,
+    prefix: 'fastify:',
+    onError: 'deny'
+})
+
+// Fastify Middleware
+app.addHook('preHandler', fastifyMiddleware(limiter, {
+    keyGenerator: (request: FastifyRequest) => {
+        // Customize the identifier key (default: req.ip)
+        return request.ip || 'unknown'
+    },
+    skip: (request: FastifyRequest) => {
+        // Ignore certain routes
+        return request.routerPath === '/healthcheck'
+    },
+    handler: (request: FastifyRequest, reply: FastifyReply, result: RateLimiterResult) => {
+        // Customize the response on limit exceeded
+        reply.status(429).send({
+            error: 'Too many requests',
+            retryAfter: Math.ceil((result.reset - Date.now()) / 1000),
+            limit: result.limit,
+            remaining: result.remaining,
+            reset: result.reset
+        })
+    }
+}))
+
+// Routes
+app.get('/', async () => {
+    return { message: 'Welcome to our Fastify API' }
+})
+
+app.get('/healthcheck', async () => {
+    return { status: 'ok' }
+})
+
+// Start the server
+const start = async () => {
+    try {
+        await app.listen({ port: 3000, host: '0.0.0.0' })
+    } catch (err) {
+        app.log.error(err)
+        process.exit(1)
+    }
+}
+
+start()
 ```
 
 ## API Reference
 
 ### `createRateLimiter(options)`
 
-Creates a rate limiter instance.
+Creates an instance of a rate limiter.
 
-- `options.strategy`: A strategy factory function (e.g., created by `createFixedWindowStrategy`).
-- `options.storage`: The storage adapter instance (e.g., created by `createMemoryStorage`).
-- `options.prefix` (optional): A prefix for storage keys. If not provided, a unique prefix is generated.
-- `options.onError`: Policy for handling storage errors (`'deny'`, `'allow'`, `'throw'`). Defaults to `'deny'`.
+```typescript
+interface RateLimiterOptions {
+    // Strategy factory (required)
+    strategy: StrategyFactory<RateLimitStrategy>;
+
+    // Storage adapter (required)
+    storage: Storage;
+
+    // Prefix for storage keys (optional)
+    prefix?: string;
+
+    // Error handling policy (optional, default: 'deny')
+    onError?: 'deny' | 'allow' | 'throw';
+}
+
+const limiter = createRateLimiter({
+    strategy: createFixedWindowStrategy({ windowMs: '1m', limit: 100 }),
+    storage: createMemoryStorage(),
+    prefix: 'api:',
+    onError: 'deny'
+});
+```
 
 ### `createFixedWindowStrategy(config)`
 
-Creates a factory function for a Fixed Window strategy instance.
+Creates a factory for a fixed window strategy.
 
-- `config.windowMs`: The time window in milliseconds or a string format (e.g., "1m", "1h").
-- `config.limit`: The maximum number of requests allowed in the window.
+```typescript
+interface WindowOptions {
+    // Duration of the window in milliseconds or readable format (e.g., '1m', '1h')
+    windowMs: number | string;
 
-Returns a `StrategyFactory` function.
+    // Maximum number of requests allowed in the window
+    limit: number;
+}
+
+const strategyFactory = createFixedWindowStrategy({
+    windowMs: '1m',  // or 60000
+    limit: 100
+});
+```
 
 ### `createSlidingWindowStrategy(config)`
 
-Creates a factory function for a Sliding Window strategy instance.
+Creates a factory for a sliding window strategy.
 
-- `config.windowMs`: The time window in milliseconds or a string format (e.g., "1m", "1h").
-- `config.limit`: The maximum number of requests allowed in the window.
-
-Returns a `StrategyFactory` function.
+```typescript
+const strategyFactory = createSlidingWindowStrategy({
+    windowMs: '1m',  // or 60000
+    limit: 100
+});
+```
 
 ### `createMemoryStorage()`
 
-Creates an in-memory storage adapter instance.
+Creates a memory storage adapter.
 
-### `createRedisStorage(redisClient)`
+```typescript
+const storage = createMemoryStorage();
+```
 
-Creates a Redis storage adapter instance.
+### `createRedisStorage(options)`
 
-- `redisClient`: An initialized and connected Redis client instance.
+Creates a Redis storage adapter.
+
+```typescript
+// With an existing Redis client
+const redisClient = createClient({ url: 'redis://localhost:6379' });
+const storage1 = createRedisStorage(redisClient);
+
+// With configuration options
+const storage2 = createRedisStorage({
+    redis: redisClient,  // or a function that returns a client
+    keyPrefix: 'ratelimit:',
+    timeout: 5000,
+    autoConnect: true
+});
+```
 
 ### `limiter.consume(identifier)`
 
 Consumes a point for a given identifier and checks if the request is allowed.
 
-- `identifier`: A unique string to identify the user (e.g., IP address, user ID).
-- Returns a `Promise<RateLimiterResult>`:
-    - `allowed`: `boolean`
-    - `limit`: `number`
-    - `remaining`: `number`
-    - `reset`: `number` (timestamp in ms)
+```typescript
+interface RateLimiterResult {
+    // If the request is allowed
+    allowed: boolean;
+
+    // Limit of requests defined
+    limit: number;
+
+    // Number of remaining requests
+    remaining: number;
+
+    // Timestamp of reset (in milliseconds)
+    reset: number;
+}
+
+const result = await limiter.consume('user-123');
+if (!result.allowed) {
+    const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
+    console.log(`Too many requests. Try again in ${retryAfter} seconds.);
+}
+```
+
+## Error Handling
+
+### Error Handling Policies
+
+When creating a limiter, you can specify how to handle storage errors via the `onError` option:
+
+- `'deny'` (default): Refuse the request in case of an error
+- `'allow'`: Allow the request in case of an error
+- `'throw'`: Throws the error for custom handling
+
+```typescript
+// Example with custom error handling
+try {
+    const result = await limiter.consume('user-123');
+    // Process the result...
+} catch (error) {
+    if (error instanceof RateLimitError) {
+        // Handle rate limit error
+        console.error('Rate limit error:', error);
+    } else {
+        // Other errors
+        console.error('Unexpected error:', error);
+    }
+}
+```
+
+## License
+
+MIT
 
 ## Documentation
 
-For more detailed examples, advanced configuration, and the full API, see the [documentation](./docs/README.md) .
-
----
+For more detailed examples, advanced configuration, and the full API, see the [documentation](./docs/README.md).
 
 ## License
 
 `next-limit` is licensed under the MIT License.
-
----
 
 ## Contributing
 

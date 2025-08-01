@@ -6,25 +6,13 @@
 
 # Function: createMemoryStorage()
 
-> **createMemoryStorage**(): `Storage`
+> **createMemoryStorage**(): [`Storage`](../interfaces/Storage.md)
 
-Defined in: [factories.ts:325](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L325)
+Defined in: [src/factories.ts:238](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/factories.ts#L238)
 
-Creates a `MemoryStorage` instance.
-Useful for testing or single-process applications.
-
-This function creates a new MemoryStorage instance that uses an in-memory Map as the storage backend.
-It's ideal for testing and development environments where you don't need to persist rate limiting
-state or share it across multiple application instances.
+Creates an in-memory storage backend.
+This is useful for single-process applications or for testing.
 
 ## Returns
 
-`Storage`
-
-A configured instance of `MemoryStorage`.
-
-## Example
-
-```typescript
-const storage = createMemoryStorage();
-```
+[`Storage`](../interfaces/Storage.md)

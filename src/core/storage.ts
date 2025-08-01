@@ -3,25 +3,73 @@
  * This decouples the rate limiting strategies from the underlying storage implementation.
  */
 
-import type { RedisClientType } from 'redis'
+import type { RedisLike, RedisMultiLike } from '../types/redis'
+
+export { RedisLike } from '../types/redis'
 
 /**
- * Defines the contract for a generic storage pipeline for atomic operations.
+ * Options for creating a `RedisStorage` instance.
+ *
+ * This interface defines the configuration options for initializing a Redis-based
+ * storage backend for rate limiting. It supports both direct Redis client instances
+ * and lazy-initialized clients via factory functions.
+ *
+ * @example
+ * ```typescript
+ * // Using a direct Redis client
+ * const redisClient = createClient();
+ * await redisClient.connect();
+ * const options1: RedisStorageOptions = {
+ *   redis: redisClient,
+ *   keyPrefix: 'myapp:',
+ *   autoConnect: false,
+ *   timeout: 5000
+ * };
+ *
+ * // Using a factory function (lazy initialization)
+ * const options2: RedisStorageOptions = {
+ *   redis: () => {
+ *     const client = createClient({ url: 'redis://localhost:6379' });
+ *     return client.connect().then(() => client);
+ *   },
+ *   keyPrefix: 'myapp:'
+ * };
+ * ```
  */
-export interface StoragePipeline {
-    increment(key: string, ttlMs?: number): this
-    zAdd(key: string, score: number, member: string): this
-    zRemoveRangeByScore(key: string, min: number, max: number): this
-    zCount(key: string): this
-    zRangeWithScores(key: string, start: number, stop: number): this
-    expire(key: string, ttlMs: number): this
-    exec(): Promise<unknown[]>
+export interface RedisStorageOptions {
+    /**
+     * An existing Redis client instance, or a factory function to create one.
+     * The factory can be synchronous or asynchronous.
+     */
+    redis: RedisLike | (() => Promise<RedisLike>) | (() => RedisLike)
+
+    /**
+     * An optional prefix for all keys stored in Redis.
+     * @default ''
+     */
+    keyPrefix?: string
+
+    /**
+     * Whether to automatically manage the Redis connection.
+     * If true, it will attempt to connect if the client is not ready.
+     * @default true
+     */
+    autoConnect?: boolean
+
+    /**
+     * Timeout for Redis operations in milliseconds.
+     * @default 5000
+     */
+    timeout?: number
 }
 
 /**
- * Defines the contract for a generic storage adapter.
- * It provides a set of methods for interacting with a storage backend,
- * abstracting away the specific details of the database (e.g., Redis, in-memory).
+ * Defines the contract for storage implementations used by the rate limiter.
+ *
+ * This interface abstracts the storage layer, allowing different storage backends
+ * (in-memory, Redis, etc.) to be used interchangeably. It provides methods for
+ * basic key-value operations with TTL support, as well as sorted set operations
+ * used by certain rate limiting strategies.
  */
 export interface Storage {
     /**
@@ -85,68 +133,197 @@ export interface Storage {
 }
 
 /**
- * A generic implementation of `Storage` for in-memory storage.
- * Useful for testing and development environments.
+ * An interface for storage pipeline implementations.
  */
-export class MemoryStorage implements Storage {
-    private store = new Map<
-        string,
-        { value: string | number; expiresAt?: number }
-    >()
-    private sortedSets = new Map<string, Map<string, number>>() // key -> member -> score
+export interface StoragePipeline {
+    increment(key: string, ttlMs?: number): Promise<this>
+    zAdd(key: string, score: number, member: string): Promise<this>
+    zRemoveRangeByScore(key: string, min: number, max: number): Promise<this>
+    zCount(key: string): Promise<this>
+    zRangeWithScores(key: string, start: number, stop: number): Promise<this>
+    expire(key: string, ttlMs: number): Promise<this>
+    exec(): Promise<unknown[]>
+}
 
-    private cleanup(key: string): void {
-        const entry = this.store.get(key)
-        if (entry?.expiresAt && entry.expiresAt < Date.now()) {
-            this.store.delete(key)
-            this.sortedSets.delete(key)
+/**
+ * A Redis-based implementation of the `Storage` interface.
+ *
+ * This class provides a Redis-backed storage solution for rate limiting,
+ * making it suitable for distributed applications that need to share rate limit
+ * state across multiple processes or servers.
+ *
+ * @example
+ * ```typescript
+ * // Create with a Redis client instance
+ * const redisClient = createClient();
+ * await redisClient.connect();
+ * const storage = new RedisStorage(redisClient);
+ *
+ * // Or with options
+ * const storageWithOptions = new RedisStorage({
+ *   redis: redisClient,
+ *   keyPrefix: 'myapp',
+ *   autoConnect: true,
+ *   timeout: 5000
+ * });
+ * ```
+ */
+export class RedisStorage implements Storage {
+    public redis: RedisLike
+    private redisFactory?: () => Promise<RedisLike> | RedisLike
+    private keyPrefix: string
+    private autoConnect: boolean
+    private timeout: number
+    private isConnecting = false
+    private isInitialized = false
+
+    constructor(options: RedisStorageOptions | RedisLike) {
+        if (this.isRedisLike(options)) {
+            this.redis = options
+            this.keyPrefix = ''
+            this.autoConnect = true
+            this.timeout = 5000
+            this.isInitialized = true
+        } else {
+            this.keyPrefix = options.keyPrefix || ''
+            this.autoConnect = options.autoConnect ?? true
+            this.timeout = options.timeout ?? 5000
+
+            if (typeof options.redis === 'function') {
+                this.redisFactory = options.redis
+                // Lazy initialization: redis will be created on first use
+                this.redis = null as unknown as RedisLike
+            } else {
+                this.redis = options.redis
+                this.isInitialized = true
+            }
         }
+    }
+
+    private isRedisLike(obj: unknown): obj is RedisLike {
+        return !!obj && typeof obj === 'object' && 'get' in obj && 'set' in obj
+    }
+
+    public async ensureReady(): Promise<void> {
+        if (this.isInitialized) {
+            await this.ensureConnection()
+            return
+        }
+
+        if (this.isConnecting) {
+            // Wait for the connection to be established
+            await new Promise<void>(resolve => {
+                const interval = setInterval(() => {
+                    if (this.isInitialized) {
+                        clearInterval(interval)
+                        resolve()
+                    }
+                }, 100)
+            })
+            await this.ensureConnection()
+            return
+        }
+
+        if (this.redisFactory) {
+            this.isConnecting = true
+            try {
+                this.redis = await Promise.resolve(this.redisFactory())
+                this.isInitialized = true
+            } finally {
+                this.isConnecting = false
+            }
+            await this.ensureConnection()
+        } else if (!this.isInitialized) {
+            throw new Error('Redis client not initialized.')
+        }
+    }
+
+    private async ensureConnection(): Promise<void> {
+        if (!this.autoConnect) return
+
+        if (this.redis.isReady === false && this.redis.connect) {
+            await this.redis.connect()
+        }
+    }
+
+    private getKey(key: string): string {
+        // Fix: Ensure the prefix ends with ':' if it's not empty
+        if (this.keyPrefix) {
+            const prefix = this.keyPrefix.endsWith(':')
+                ? this.keyPrefix
+                : `${this.keyPrefix}:`
+            return `${prefix}${key}`
+        }
+        return key
+    }
+
+    private withTimeout<T>(promise: Promise<T>): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(
+                    new Error(
+                        `Redis operation timed out after ${this.timeout}ms`
+                    )
+                )
+            }, this.timeout)
+
+            promise
+                .then(resolve)
+                .catch(reject)
+                .finally(() => clearTimeout(timeoutId))
+        })
     }
 
     async get(key: string): Promise<string | null> {
-        this.cleanup(key)
-        const entry = this.store.get(key)
-        return entry ? String(entry.value) : null
+        await this.ensureReady()
+        return this.withTimeout(this.redis.get(this.getKey(key)))
     }
 
     async set(key: string, value: string, ttlMs?: number): Promise<void> {
-        const entry = {
-            value,
-            expiresAt: ttlMs ? Date.now() + ttlMs : undefined,
+        await this.ensureReady()
+        const redisKey = this.getKey(key)
+
+        if (ttlMs) {
+            await this.withTimeout(
+                this.redis.set(redisKey, value, { EX: Math.ceil(ttlMs / 1000) })
+            )
+        } else {
+            await this.withTimeout(this.redis.set(redisKey, value))
         }
-        this.store.set(key, entry)
     }
 
     async delete(key: string): Promise<void> {
-        this.store.delete(key)
-        this.sortedSets.delete(key)
+        await this.ensureReady()
+        await this.withTimeout(this.redis.del(this.getKey(key)))
     }
 
     async exists(key: string): Promise<boolean> {
-        this.cleanup(key)
-        return this.store.has(key)
+        await this.ensureReady()
+        const result = await this.withTimeout(
+            this.redis.exists(this.getKey(key))
+        )
+        return result === 1
     }
 
     async increment(key: string, ttlMs?: number): Promise<number> {
-        this.cleanup(key)
-        const current = this.store.get(key)
-        const newValue = (current ? Number(current.value) : 0) + 1
+        await this.ensureReady()
+        const redisKey = this.getKey(key)
 
-        await this.set(key, String(newValue), ttlMs)
-        return newValue
+        const pipeline = this.redis.multi()
+        pipeline.incr(redisKey)
+        if (ttlMs) {
+            pipeline.pExpire(redisKey, ttlMs)
+        }
+
+        const results = await this.withTimeout(pipeline.exec())
+        return results![0] as number
     }
 
     async zAdd(key: string, score: number, member: string): Promise<void> {
-        this.cleanup(key)
-        if (!this.sortedSets.has(key)) {
-            this.sortedSets.set(key, new Map())
-        }
-        this.sortedSets.get(key)!.set(member, score)
-
-        // Maintain the main entry for expiration
-        if (!this.store.has(key)) {
-            this.store.set(key, { value: 'zset' })
-        }
+        await this.ensureReady()
+        await this.withTimeout(
+            this.redis.zAdd(this.getKey(key), { score, value: member })
+        )
     }
 
     async zRemoveRangeByScore(
@@ -154,23 +331,15 @@ export class MemoryStorage implements Storage {
         min: number,
         max: number
     ): Promise<number> {
-        this.cleanup(key)
-        const sortedSet = this.sortedSets.get(key)
-        if (!sortedSet) return 0
-
-        let removed = 0
-        for (const [member, score] of sortedSet.entries()) {
-            if (score >= min && score <= max) {
-                sortedSet.delete(member)
-                removed++
-            }
-        }
-        return removed
+        await this.ensureReady()
+        return this.withTimeout(
+            this.redis.zRemRangeByScore(this.getKey(key), min, max)
+        )
     }
 
     async zCount(key: string): Promise<number> {
-        this.cleanup(key)
-        return this.sortedSets.get(key)?.size || 0
+        await this.ensureReady()
+        return this.withTimeout(this.redis.zCard(this.getKey(key)))
     }
 
     async zRangeWithScores(
@@ -178,16 +347,215 @@ export class MemoryStorage implements Storage {
         start: number,
         stop: number
     ): Promise<Array<{ member: string; score: number }>> {
-        this.cleanup(key)
-        const sortedSet = this.sortedSets.get(key)
-        if (!sortedSet) return []
+        await this.ensureReady()
+        const results = await this.withTimeout(
+            this.redis.zRangeWithScores(this.getKey(key), start, stop)
+        )
+        return results.map(item => ({ member: item.value, score: item.score }))
+    }
 
-        const entries = Array.from(sortedSet.entries())
-            .map(([member, score]) => ({ member, score }))
-            .sort((a, b) => a.score - b.score)
+    pipeline(): StoragePipeline {
+        return new RedisPipeline(this, this.keyPrefix)
+    }
 
-        const end = stop === -1 ? entries.length : stop + 1
-        return entries.slice(start, end)
+    async expire(key: string, ttlMs: number): Promise<void> {
+        await this.ensureReady()
+        await this.withTimeout(this.redis.pExpire(this.getKey(key), ttlMs))
+    }
+}
+
+export class RedisPipeline implements StoragePipeline {
+    private multi: RedisMultiLike | null = null
+
+    constructor(
+        private storage: RedisStorage,
+        private keyPrefix: string
+    ) {}
+
+    private async initialize(): Promise<void> {
+        if (!this.multi) {
+            await this.storage.ensureReady()
+            this.multi = this.storage.redis.multi()
+        }
+    }
+
+    private getKey(key: string): string {
+        if (this.keyPrefix) {
+            const prefix = this.keyPrefix.endsWith(':')
+                ? this.keyPrefix
+                : `${this.keyPrefix}:`
+            return `${prefix}${key}`
+        }
+        return key
+    }
+
+    async increment(key: string, ttlMs?: number): Promise<this> {
+        await this.initialize()
+        const redisKey = this.getKey(key)
+        this.multi!.incr(redisKey)
+        if (ttlMs) {
+            this.multi!.pExpire(redisKey, ttlMs)
+        }
+        return this
+    }
+
+    async zAdd(key: string, score: number, member: string): Promise<this> {
+        await this.initialize()
+        this.multi!.zAdd(this.getKey(key), { score, value: member })
+        return this
+    }
+
+    async zRemoveRangeByScore(
+        key: string,
+        min: number,
+        max: number
+    ): Promise<this> {
+        await this.initialize()
+        this.multi!.zRemRangeByScore(this.getKey(key), min, max)
+        return this
+    }
+
+    async zCount(key: string): Promise<this> {
+        await this.initialize()
+        this.multi!.zCard(this.getKey(key))
+        return this
+    }
+
+    async zRangeWithScores(
+        key: string,
+        start: number,
+        stop: number
+    ): Promise<this> {
+        await this.initialize()
+        this.multi!.zRangeWithScores(this.getKey(key), start, stop)
+        return this
+    }
+
+    async expire(key: string, ttlMs: number): Promise<this> {
+        await this.initialize()
+        this.multi!.pExpire(this.getKey(key), ttlMs)
+        return this
+    }
+
+    async exec(): Promise<unknown[]> {
+        if (!this.multi) {
+            return []
+        }
+        return this.multi.exec()
+    }
+}
+
+/**
+ * An in-memory implementation of the `Storage` interface.
+ *
+ * This implementation stores all data in memory and is primarily intended for
+ * testing or single-process applications. It is not suitable for distributed
+ * environments as the state is not shared between processes.
+ *
+ * @example
+ * ```typescript
+ * const storage = new MemoryStorage();
+ * await storage.set('key', 'value', 60000); // TTL of 60 seconds
+ * const value = await storage.get('key');
+ * ```
+ */
+export class MemoryStorage implements Storage {
+    private store = new Map<string, string>()
+    private expirations = new Map<string, number>()
+    private zsets = new Map<string, Array<{ score: number; member: string }>>()
+
+    private checkExpired(key: string): void {
+        if (
+            this.expirations.has(key) &&
+            this.expirations.get(key)! < Date.now()
+        ) {
+            this.store.delete(key)
+            this.expirations.delete(key)
+            this.zsets.delete(key)
+        }
+    }
+
+    async get(key: string): Promise<string | null> {
+        this.checkExpired(key)
+        return this.store.get(key) ?? null
+    }
+
+    async set(key: string, value: string, ttlMs?: number): Promise<void> {
+        this.store.set(key, value)
+        if (ttlMs) {
+            this.expirations.set(key, Date.now() + ttlMs)
+        } else {
+            this.expirations.delete(key)
+        }
+    }
+
+    async delete(key: string): Promise<void> {
+        this.store.delete(key)
+        this.expirations.delete(key)
+        this.zsets.delete(key)
+    }
+
+    async exists(key: string): Promise<boolean> {
+        this.checkExpired(key)
+        return this.store.has(key)
+    }
+
+    async increment(key: string, ttlMs?: number): Promise<number> {
+        this.checkExpired(key)
+        const currentValue = parseInt(this.store.get(key) ?? '0', 10)
+        const newValue = currentValue + 1
+        this.store.set(key, newValue.toString())
+        if (ttlMs) {
+            this.expirations.set(key, Date.now() + ttlMs)
+        }
+        return newValue
+    }
+
+    async zAdd(key: string, score: number, member: string): Promise<void> {
+        this.checkExpired(key)
+        if (!this.zsets.has(key)) {
+            this.zsets.set(key, [])
+        }
+        const zset = this.zsets.get(key)!
+        // Remove existing member to update score
+        const existingIndex = zset.findIndex(item => item.member === member)
+        if (existingIndex > -1) {
+            zset.splice(existingIndex, 1)
+        }
+        zset.push({ score, member })
+        zset.sort((a, b) => a.score - b.score)
+    }
+
+    async zRemoveRangeByScore(
+        key: string,
+        min: number,
+        max: number
+    ): Promise<number> {
+        this.checkExpired(key)
+        if (!this.zsets.has(key)) return 0
+        const zset = this.zsets.get(key)!
+        const originalLength = zset.length
+        const filtered = zset.filter(
+            item => item.score < min || item.score > max
+        )
+        this.zsets.set(key, filtered)
+        return originalLength - filtered.length
+    }
+
+    async zCount(key: string): Promise<number> {
+        this.checkExpired(key)
+        return this.zsets.get(key)?.length ?? 0
+    }
+
+    async zRangeWithScores(
+        key: string,
+        start: number,
+        stop: number
+    ): Promise<Array<{ member: string; score: number }>> {
+        this.checkExpired(key)
+        const zset = this.zsets.get(key) ?? []
+        const end = stop === -1 ? undefined : stop + 1
+        return zset.slice(start, end)
     }
 
     pipeline(): StoragePipeline {
@@ -195,165 +563,52 @@ export class MemoryStorage implements Storage {
     }
 
     async expire(key: string, ttlMs: number): Promise<void> {
-        const entry = this.store.get(key)
-        if (entry) {
-            entry.expiresAt = Date.now() + ttlMs
+        if (this.store.has(key)) {
+            this.expirations.set(key, Date.now() + ttlMs)
         }
     }
 }
 
 class MemoryPipeline implements StoragePipeline {
-    private operations: Array<() => Promise<unknown>> = []
+    private commands: Array<() => Promise<unknown>> = []
 
     constructor(private storage: MemoryStorage) {}
 
-    increment(key: string, ttlMs?: number): this {
-        this.operations.push(() => this.storage.increment(key, ttlMs))
-        return this
+    increment(key: string, ttlMs?: number): Promise<this> {
+        this.commands.push(() => this.storage.increment(key, ttlMs))
+        return Promise.resolve(this)
     }
 
-    zAdd(key: string, score: number, member: string): this {
-        this.operations.push(() => this.storage.zAdd(key, score, member))
-        return this
+    zAdd(key: string, score: number, member: string): Promise<this> {
+        this.commands.push(() => this.storage.zAdd(key, score, member))
+        return Promise.resolve(this)
     }
 
-    zRemoveRangeByScore(key: string, min: number, max: number): this {
-        this.operations.push(() =>
+    zRemoveRangeByScore(key: string, min: number, max: number): Promise<this> {
+        this.commands.push(() =>
             this.storage.zRemoveRangeByScore(key, min, max)
         )
-        return this
+        return Promise.resolve(this)
     }
 
-    zCount(key: string): this {
-        this.operations.push(() => this.storage.zCount(key))
-        return this
+    zCount(key: string): Promise<this> {
+        this.commands.push(() => this.storage.zCount(key))
+        return Promise.resolve(this)
     }
 
-    zRangeWithScores(key: string, start: number, stop: number): this {
-        this.operations.push(() =>
+    zRangeWithScores(key: string, start: number, stop: number): Promise<this> {
+        this.commands.push(() =>
             this.storage.zRangeWithScores(key, start, stop)
         )
-        return this
+        return Promise.resolve(this)
     }
 
-    expire(key: string, ttlMs: number): this {
-        this.operations.push(() => this.storage.expire(key, ttlMs))
-        return this
-    }
-
-    async exec(): Promise<unknown[]> {
-        return Promise.all(this.operations.map(op => op()))
-    }
-}
-
-/**
- * A generic implementation of `Storage` for Redis.
- * Ideal for production and distributed environments.
- */
-export class RedisStorage implements Storage {
-    constructor(private redis: RedisClientType) {}
-
-    async get(key: string): Promise<string | null> {
-        return this.redis.get(key)
-    }
-
-    async set(key: string, value: string, ttlMs?: number): Promise<void> {
-        if (ttlMs) {
-            await this.redis.setEx(key, Math.ceil(ttlMs / 1000), value)
-        } else {
-            await this.redis.set(key, value)
-        }
-    }
-
-    async delete(key: string): Promise<void> {
-        await this.redis.del(key)
-    }
-
-    async exists(key: string): Promise<boolean> {
-        return (await this.redis.exists(key)) === 1
-    }
-
-    async increment(key: string, ttlMs?: number): Promise<number> {
-        const pipeline = this.redis.multi()
-        pipeline.incr(key)
-        if (ttlMs) {
-            pipeline.pExpire(key, ttlMs)
-        }
-        const results = await pipeline.exec()
-        return results![0] as unknown as number
-    }
-
-    async zAdd(key: string, score: number, member: string): Promise<void> {
-        await this.redis.zAdd(key, { score, value: member })
-    }
-
-    async zRemoveRangeByScore(
-        key: string,
-        min: number,
-        max: number
-    ): Promise<number> {
-        return this.redis.zRemRangeByScore(key, min, max)
-    }
-
-    async zCount(key: string): Promise<number> {
-        return this.redis.zCard(key)
-    }
-
-    async zRangeWithScores(
-        key: string,
-        start: number,
-        stop: number
-    ): Promise<Array<{ member: string; score: number }>> {
-        const results = await this.redis.zRangeWithScores(key, start, stop)
-        return results.map(item => ({ member: item.value, score: item.score }))
-    }
-
-    pipeline(): StoragePipeline {
-        return new RedisPipeline(this.redis.multi())
-    }
-
-    async expire(key: string, ttlMs: number): Promise<void> {
-        await this.redis.pExpire(key, ttlMs)
-    }
-}
-
-class RedisPipeline implements StoragePipeline {
-    constructor(private multi: ReturnType<RedisClientType['multi']>) {}
-
-    increment(key: string, ttlMs?: number): this {
-        this.multi.incr(key)
-        if (ttlMs) {
-            this.multi.pExpire(key, ttlMs)
-        }
-        return this
-    }
-
-    zAdd(key: string, score: number, member: string): this {
-        this.multi.zAdd(key, { score, value: member })
-        return this
-    }
-
-    zRemoveRangeByScore(key: string, min: number, max: number): this {
-        this.multi.zRemRangeByScore(key, min, max)
-        return this
-    }
-
-    zCount(key: string): this {
-        this.multi.zCard(key)
-        return this
-    }
-
-    zRangeWithScores(key: string, start: number, stop: number): this {
-        this.multi.zRangeWithScores(key, start, stop)
-        return this
-    }
-
-    expire(key: string, ttlMs: number): this {
-        this.multi.pExpire(key, ttlMs)
-        return this
+    expire(key: string, ttlMs: number): Promise<this> {
+        this.commands.push(() => this.storage.expire(key, ttlMs))
+        return Promise.resolve(this)
     }
 
     async exec(): Promise<unknown[]> {
-        return this.multi.exec()
+        return Promise.all(this.commands.map(cmd => cmd()))
     }
 }

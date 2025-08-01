@@ -6,7 +6,7 @@
 
 # Interface: ExpressMiddlewareOptions
 
-Defined in: [middleware/express.ts:12](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/middleware/express.ts#L12)
+Defined in: [src/middleware/express.ts:12](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/middleware/express.ts#L12)
 
 Configuration options for the Express middleware.
 
@@ -16,7 +16,7 @@ Configuration options for the Express middleware.
 
 > `optional` **identifier**: (`req`) => `string`
 
-Defined in: [middleware/express.ts:24](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/middleware/express.ts#L24)
+Defined in: [src/middleware/express.ts:24](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/middleware/express.ts#L24)
 
 A function to generate a unique identifier for a request.
 Defaults to using `req.ip`.
@@ -41,7 +41,7 @@ A string identifier.
 
 > **limiter**: [`RateLimiterInstance`](RateLimiterInstance.md)
 
-Defined in: [middleware/express.ts:17](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/middleware/express.ts#L17)
+Defined in: [src/middleware/express.ts:17](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/middleware/express.ts#L17)
 
 The `RateLimiterInstance` to use for checking requests.
 This should be created using the `createRateLimiter` factory.
@@ -52,7 +52,7 @@ This should be created using the `createRateLimiter` factory.
 
 > `optional` **onDeny**: (`result`, `req`, `res`, `next`) => `void`
 
-Defined in: [middleware/express.ts:33](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/middleware/express.ts#L33)
+Defined in: [src/middleware/express.ts:33](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/middleware/express.ts#L33)
 
 A function to execute when a request is denied.
 If not provided, a default 429 response is sent.

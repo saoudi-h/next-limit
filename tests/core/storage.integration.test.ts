@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { MemoryStorage, RedisStorage } from '../../src/core/storage'
 import { createClient, RedisClientType } from 'redis'
+import { createRedisStorage } from '../../src/factories'
+
+import { RedisLike } from '../../src/types/redis'
 
 describe('Storage Implementations', () => {
     // --- MemoryStorage Tests ---
@@ -21,7 +24,6 @@ describe('Storage Implementations', () => {
             const secondIncr = await storage.increment(key, ttl)
             expect(secondIncr).toBe(2)
 
-            // Verify TTL is working (difficult to test with exact timing, so we check existence)
             const value = await storage.get(key)
             expect(value).toBe('2')
         })
@@ -53,14 +55,14 @@ describe('Storage Implementations', () => {
             expect(range[0].score).toBe(now - 1000)
         })
 
-        it('should execute a pipeline of commands atomically', async () => {
+        it('should execute a pipeline of commands', async () => {
             const key1 = 'pipeline_incr'
             const key2 = 'pipeline_zset'
 
             const pipeline = storage.pipeline()
-            pipeline.increment(key1)
-            pipeline.zAdd(key2, 100, 'member1')
-            pipeline.zCount(key2)
+            await pipeline.increment(key1)
+            await pipeline.zAdd(key2, 100, 'member1')
+            await pipeline.zCount(key2)
 
             const results = await pipeline.exec()
 
@@ -77,7 +79,6 @@ describe('Storage Implementations', () => {
     // --- RedisStorage Integration Tests ---
     describe('RedisStorage', () => {
         let redis: RedisClientType
-        let storage: RedisStorage
 
         beforeEach(async () => {
             if (!process.env.REDIS_URL) {
@@ -86,13 +87,69 @@ describe('Storage Implementations', () => {
             }
             redis = createClient({ url: process.env.REDIS_URL })
             await redis.connect()
-            storage = new RedisStorage(redis as unknown as RedisClientType)
-
-            // Clean up before each test
             await redis.flushDb()
         })
 
+        afterEach(async () => {
+            if (redis?.isReady) {
+                await redis.disconnect()
+            }
+        })
+
+        it('should work with a pre-existing client', async () => {
+            const storage = new RedisStorage(redis as unknown as RedisLike)
+            await storage.set('test', 'value')
+            const value = await storage.get('test')
+            expect(value).toBe('value')
+        })
+
+        it('should work with the factory and a URL', async () => {
+            const storage = createRedisStorage({ url: process.env.REDIS_URL })
+            await storage.set('test', 'value')
+            const value = await storage.get('test')
+            expect(value).toBe('value')
+        })
+
+        it('should work with a factory function', async () => {
+            const factory = async () => {
+                const client = createClient({ url: process.env.REDIS_URL })
+                await client.connect()
+                return client as unknown as RedisLike
+            }
+            const storage = createRedisStorage(factory)
+            await storage.set('test', 'value')
+            const value = await storage.get('test')
+            expect(value).toBe('value')
+        })
+
+        it('should use keyPrefix correctly', async () => {
+            const storage = createRedisStorage({
+                redis: redis as unknown as RedisLike,
+                keyPrefix: 'myapp:',
+            })
+            await storage.set('test', 'value')
+            const redisValue = await redis.get('myapp:test')
+            expect(redisValue).toBe('value')
+        })
+
+        it('should timeout on slow operations', async () => {
+            vi.spyOn(redis, 'get').mockImplementation(async () => {
+                await new Promise(resolve => setTimeout(resolve, 100))
+                return null
+            })
+
+            const storage = createRedisStorage({
+                redis: redis as unknown as RedisLike,
+                timeout: 50,
+            })
+
+            await expect(storage.get('test')).rejects.toThrow(
+                'Redis operation timed out after 50ms'
+            )
+        })
+
         it('should increment a key and set TTL', async () => {
+            const storage = new RedisStorage(redis as unknown as RedisLike)
             const key = 'test_increment_redis'
             const ttl = 1000
 
@@ -110,6 +167,7 @@ describe('Storage Implementations', () => {
         })
 
         it('should perform sorted set operations correctly', async () => {
+            const storage = new RedisStorage(redis as unknown as RedisLike)
             const key = 'test_zset_redis'
             const now = Date.now()
 
@@ -135,14 +193,15 @@ describe('Storage Implementations', () => {
             expect(range[0].member).toBe('member2')
         })
 
-        it('should execute a pipeline of commands atomically', async () => {
+        it('should execute a pipeline of commands', async () => {
+            const storage = new RedisStorage(redis as unknown as RedisLike)
             const key1 = 'pipeline_incr_redis'
             const key2 = 'pipeline_zset_redis'
 
             const pipeline = storage.pipeline()
-            pipeline.increment(key1)
-            pipeline.zAdd(key2, 100, 'member1')
-            pipeline.zCount(key2)
+            await pipeline.increment(key1)
+            await pipeline.zAdd(key2, 100, 'member1')
+            await pipeline.zCount(key2)
 
             const results = await pipeline.exec()
 

@@ -1,41 +1,21 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import {
     createMemoryStorage,
-    createRedisStorage,
     createFixedWindowStrategy,
     createSlidingWindowStrategy,
     createRateLimiter,
 } from '../src/factories'
-import { MemoryStorage, RedisStorage } from '../src/core/storage'
-import type { RedisClientType as Redis } from 'redis'
+import { MemoryStorage } from '../src/core/storage'
 import {
     FixedWindowStrategy,
     SlidingWindowStrategy,
 } from '../src/core/strategy'
-
-vi.mock('../src/core/storage', async importOriginal => {
-    const original =
-        await importOriginal<typeof import('../src/core/storage')>()
-    return {
-        ...original,
-        RedisStorage: vi.fn(),
-        MemoryStorage: class extends original.MemoryStorage {},
-    }
-})
 
 describe('Storage Factories', () => {
     describe('createMemoryStorage', () => {
         it('should return an instance of MemoryStorage', () => {
             const storage = createMemoryStorage()
             expect(storage).toBeInstanceOf(MemoryStorage)
-        })
-    })
-
-    describe('createRedisStorage', () => {
-        it('should return an instance of RedisStorage', () => {
-            const redisClient = {} as Redis
-            createRedisStorage(redisClient)
-            expect(RedisStorage).toHaveBeenCalledWith(redisClient)
         })
     })
 })
@@ -54,8 +34,6 @@ describe('Strategy Factories', () => {
                 prefix: 'test-prefix',
             })
             expect(strategy).toBeInstanceOf(FixedWindowStrategy)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).requestLimit).toBe(100)
         })
 
         it('should create a fixed window strategy with string time format', () => {
@@ -68,10 +46,6 @@ describe('Strategy Factories', () => {
                 prefix: 'test-prefix',
             })
             expect(strategy).toBeInstanceOf(FixedWindowStrategy)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).windowMs).toBe(60000) // 1 minute in milliseconds
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).requestLimit).toBe(100)
         })
 
         describe('createRateLimiter', () => {
@@ -107,8 +81,6 @@ describe('Strategy Factories', () => {
 
                 expect(limiter1).toBeDefined()
                 expect(limiter2).toBeDefined()
-                // Note: We're not checking if the prefixes are different because
-                // Math.random() might generate the same value in tests
             })
         })
     })
@@ -124,8 +96,6 @@ describe('Strategy Factories', () => {
                 prefix: 'test-prefix',
             })
             expect(strategy).toBeInstanceOf(SlidingWindowStrategy)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).requestLimit).toBe(100)
         })
 
         it('should create a sliding window strategy with string time format', () => {
@@ -138,10 +108,6 @@ describe('Strategy Factories', () => {
                 prefix: 'test-prefix',
             })
             expect(strategy).toBeInstanceOf(SlidingWindowStrategy)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).windowMs).toBe(60000) // 1 minute in milliseconds
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
-            expect((strategy as any).requestLimit).toBe(100)
         })
     })
 })

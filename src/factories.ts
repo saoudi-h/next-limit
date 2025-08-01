@@ -1,327 +1,383 @@
 /**
- * @file Contains factory functions for creating rate limiter components.
+ * @module
  * This is the primary entry point for configuring and creating rate limiters.
  */
 
-import type { RedisClientType } from 'redis'
-import type { StringValue } from 'ms'
+import { createClient, RedisClientOptions } from 'redis'
+import ms, { StringValue } from 'ms'
 import { RateLimiter, RateLimiterInstance } from './core/rate-limiter'
 import {
     FixedWindowStrategy,
-    RateLimitStrategy,
     SlidingWindowStrategy,
     StrategyFactory,
+    RateLimitStrategy,
 } from './core/strategy'
-import { MemoryStorage, RedisStorage, Storage } from './core/storage'
-import ms from 'ms'
+import {
+    MemoryStorage,
+    RedisStorage,
+    RedisStorageOptions,
+    Storage,
+} from './core/storage'
+import type { RedisLike } from './types/redis'
 
 // --- Strategy Configuration Types ---
 
 /**
- * Configuration for the Fixed Window strategy.
- *
- * This interface defines the configuration options for the fixed window rate limiting strategy.
- * The fixed window strategy divides time into fixed intervals (windows) and allows
- * a maximum number of requests within each window.
+ * Common options for all window-based strategies.
  */
-export interface FixedWindowStrategyConfig {
-    /** The duration of the time window in milliseconds or a string format (e.g., "1m", "1h"). */
+export interface WindowOptions {
+    /**
+     * The duration of the time window in milliseconds or as a string.
+     * @example 60000, '1m', '1h'
+     */
     windowMs: number | StringValue
-    /** The maximum number of requests allowed within the window. */
+
+    /**
+     * The maximum number of requests allowed in the time window.
+     */
     limit: number
 }
 
+// --- Rate Limiter Configuration Types ---
+
 /**
- * Configuration for the Sliding Window strategy.
- *
- * This interface defines the configuration options for the sliding window rate limiting strategy.
- * The sliding window strategy provides a more accurate rate limiting approach by
- * considering the request rate over a rolling time window.
+ * Configuration for the main rate limiter.
  */
-export interface SlidingWindowStrategyConfig {
-    /** The duration of the time window in milliseconds or a string format (e.g., "1m", "1h"). */
-    windowMs: number | StringValue
-    /** The maximum number of requests allowed within the window. */
-    limit: number
+export interface RateLimiterConfig<T extends RateLimitStrategy> {
+    /**
+     * The strategy factory to use for rate limiting.
+     * @see createFixedWindowStrategy
+     * @see createSlidingWindowStrategy
+     */
+    strategy: StrategyFactory<T>
+
+    /**
+     * The storage backend to use for tracking requests.
+     * @see createMemoryStorage
+     * @see createRedisStorage
+     */
+    storage: Storage
+
+    /**
+     * A unique prefix for storage keys to avoid collisions.
+     * If not provided, a unique prefix will be generated.
+     */
+    prefix?: string
+
+    /**
+     * The policy to apply when an error occurs in the storage backend.
+     * - `throw`: Rethrow the error (default).
+     * - `allow`: Allow the request to proceed.
+     * - `deny`: Deny the request.
+     */
+    onError?: 'throw' | 'allow' | 'deny'
+}
+
+// --- Auto Redis Configuration ---
+
+/**
+ * Configuration for automatically creating a Redis client.
+ */
+export interface AutoRedisConfig extends RedisClientOptions {
+    /**
+     * Optional key prefix for Redis storage.
+     */
+    keyPrefix?: string
+
+    /**
+     * Whether to automatically connect the client.
+     * @default true
+     */
+    autoConnect?: boolean
+
+    /**
+     * Timeout for Redis operations in milliseconds.
+     * @default 5000
+     */
+    timeout?: number
 }
 
 // --- Factory Functions ---
 
 /**
- * Creates a factory function for a `FixedWindowStrategy` instance.
+ * Creates a factory function for fixed window rate limiting strategies.
  *
- * This function returns a factory that, when executed with a context containing
- * storage and prefix, creates a new `FixedWindowStrategy` instance.
+ * This strategy is simple and efficient, with constant time complexity O(1) for
+ * both memory and computation. It divides time into fixed intervals (windows)
+ * and allows a maximum number of requests within each window.
  *
- * @param config The configuration for the fixed window strategy.
- * @param config.windowMs The duration of the time window in milliseconds or a string format (e.g., "1m", "1h").
- * @param config.limit The maximum number of requests allowed within the window.
- * @returns A factory function that creates a `FixedWindowStrategy` instance.
- *
- * @example
- * ```typescript
- * const strategyFactory = createFixedWindowStrategy({
- *   windowMs: 60000, // 1 minute
- *   limit: 100,      // 100 requests per minute
- * });
- *
- * const strategy = strategyFactory({
- *   storage: createMemoryStorage(),
- *   prefix: 'my-app'
- * });
- * ```
+ * @param options Configuration options for the fixed window strategy
+ * @returns A factory function that creates FixedWindowStrategy instances
  *
  * @example
  * ```typescript
- * const strategyFactory = createFixedWindowStrategy({
- *   windowMs: "1m", // 1 minute
- *   limit: 100,     // 100 requests per minute
+ * const createStrategy = createFixedWindowStrategy({
+ *   windowMs: 60000, // 1 minute window
+ *   limit: 100       // Max 100 requests per window
  * });
  *
- * const strategy = strategyFactory({
- *   storage: createMemoryStorage(),
- *   prefix: 'my-app'
- * });
+ * // Later, with storage and prefix
+ * const strategy = createStrategy({ storage, prefix: 'rate-limit:' });
  * ```
- *
- * @throws Will throw an error if `windowMs` is not a valid positive number or a StringValue from `ms` (e.g., "1m", "1h").
- * @see https://github.com/vercel/ms for more information on string format.
  */
 export function createFixedWindowStrategy(
-    config: FixedWindowStrategyConfig
-): StrategyFactory<RateLimitStrategy> {
+    options: WindowOptions
+): StrategyFactory<FixedWindowStrategy> {
     // Convert windowMs to milliseconds if it's a string
     const windowMs =
-        typeof config.windowMs === 'string'
-            ? ms(config.windowMs)
-            : config.windowMs
+        typeof options.windowMs === 'string'
+            ? ms(options.windowMs)
+            : options.windowMs
 
     // Validate that windowMs is a valid positive number
     if (typeof windowMs !== 'number' || isNaN(windowMs) || windowMs <= 0) {
         throw new Error(
-            `Invalid windowMs value: "${config.windowMs}". Please provide a valid duration string (e.g., '1h', '30m') or a positive number of milliseconds.`
+            `Invalid windowMs value: "${options.windowMs}". Please provide a valid duration string (e.g., '1h', '30m') or a positive number of milliseconds.`
         )
     }
-    return (context: { storage: Storage; prefix: string }) => {
+    return (context: {
+        storage: Storage
+        prefix: string
+    }): FixedWindowStrategy => {
         return new FixedWindowStrategy(
             context.storage,
             context.prefix,
             windowMs,
-            config.limit
+            options.limit
         )
     }
 }
 
 /**
- * Creates a factory function for a `SlidingWindowStrategy` instance.
+ * Creates a factory function for sliding window rate limiting strategies.
  *
- * This function returns a factory that, when executed with a context containing
- * storage and prefix, creates a new `SlidingWindowStrategy` instance.
+ * This strategy provides more accurate rate limiting by considering a rolling
+ * time window. It uses Redis sorted sets to track request timestamps and
+ * allows a maximum number of requests within any window of the specified duration.
  *
- * @param config The configuration for the sliding window strategy.
- * @param config.windowMs The duration of the time window in milliseconds or a string format (e.g., "1m", "1h").
- * @param config.limit The maximum number of requests allowed within the window.
- * @returns A factory function that creates a `SlidingWindowStrategy` instance.
- *
- * @example
- * ```typescript
- * const strategyFactory = createSlidingWindowStrategy({
- *   windowMs: 60000, // 1 minute
- *   limit: 100,      // 100 requests per minute
- * });
- *
- * const strategy = strategyFactory({
- *   storage: createMemoryStorage(),
- *   prefix: 'my-app'
- * });
- * ```
+ * @param options Configuration options for the sliding window strategy
+ * @returns A factory function that creates SlidingWindowStrategy instances
  *
  * @example
  * ```typescript
- * const strategyFactory = createSlidingWindowStrategy({
- *   windowMs: "1m", // 1 minute
- *   limit: 100,     // 100 requests per minute
+ * const createStrategy = createSlidingWindowStrategy({
+ *   windowMs: 60000, // 1 minute window
+ *   limit: 100       // Max 100 requests per window
  * });
  *
- * const strategy = strategyFactory({
- *   storage: createMemoryStorage(),
- *   prefix: 'my-app'
- * });
+ * // Later, with storage and prefix
+ * const strategy = createStrategy({ storage, prefix: 'rate-limit:' });
  * ```
- *
- * @throws Will throw an error if `windowMs` is not a valid positive number or a StringValue from `ms` (e.g., "1m", "1h").
- * @see https://github.com/vercel/ms for more information on string format.
  */
 export function createSlidingWindowStrategy(
-    config: SlidingWindowStrategyConfig
-): StrategyFactory<RateLimitStrategy> {
+    options: WindowOptions
+): StrategyFactory<SlidingWindowStrategy> {
     // Convert windowMs to milliseconds if it's a string
     const windowMs =
-        typeof config.windowMs === 'string'
-            ? ms(config.windowMs)
-            : config.windowMs
+        typeof options.windowMs === 'string'
+            ? ms(options.windowMs)
+            : options.windowMs
 
     // Validate that windowMs is a valid positive number
     if (typeof windowMs !== 'number' || isNaN(windowMs) || windowMs <= 0) {
         throw new Error(
-            `Invalid windowMs value: "${config.windowMs}". Please provide a valid duration string (e.g., '1h', '30m') or a positive number of milliseconds.`
+            `Invalid windowMs value: "${options.windowMs}". Please provide a valid duration string (e.g., '1h', '30m') or a positive number of milliseconds.`
         )
     }
-    return (context: { storage: Storage; prefix: string }) => {
+    return (context: {
+        storage: Storage
+        prefix: string
+    }): SlidingWindowStrategy => {
         return new SlidingWindowStrategy(
             context.storage,
             context.prefix,
             windowMs,
-            config.limit
+            options.limit
         )
     }
 }
 
-// --- Main Rate Limiter Factory ---
-
 /**
- * Options for creating a rate limiter with the `createRateLimiter` factory.
- *
- * This interface defines the configuration options for creating a rate limiter instance.
- * It includes the strategy factory, storage instance, optional prefix, and error handling policy.
- */
-export interface CreateRateLimiterOptions {
-    /**
-     * The rate limiting strategy factory to use.
-     * Create this using a strategy factory like `createFixedWindowStrategy`.
-     */
-    strategy: StrategyFactory<RateLimitStrategy>
-
-    /**
-     * The storage instance to use.
-     * Create this using a storage factory like `createMemoryStorage`.
-     */
-    storage: Storage
-
-    /**
-     * An optional prefix for storage keys.
-     * If provided, it will be used as the prefix for all storage keys.
-     * If not provided, a unique prefix will be automatically generated.
-     */
-    prefix?: string
-
-    /**
-     * Defines the behavior when a storage error occurs.
-     * - 'allow': The request is allowed to proceed.
-     * - 'deny': The request is denied (default).
-     * - 'throw': The underlying storage error is thrown.
-     * @default 'deny'
-     */
-    onError?: 'allow' | 'deny' | 'throw'
-}
-
-/**
- * Generates a unique prefix for the rate limiter.
- * @returns A unique string prefix.
- */
-function generateUniquePrefix(): string {
-    return 'next-limit-' + Math.random().toString(36).substring(2, 8)
-}
-
-/**
- * Creates and configures a new rate limiter instance.
- * This is the main entry point for using the library.
- *
- * The createRateLimiter function takes a configuration object that specifies
- * the rate limiting strategy, storage backend, optional prefix, and error handling policy.
- * It returns a RateLimiterInstance that can be used to check if requests are allowed.
- *
- * @param options The options for the rate limiter.
- * @param options.strategy The rate limiting strategy factory to use.
- * @param options.storage The storage instance to use.
- * @param options.prefix An optional prefix for storage keys. If not provided, a unique prefix is generated.
- * @param options.onError Defines the behavior when a storage error occurs.
- * @returns A `RateLimiterInstance` ready to be used.
+ * Creates and configures a rate limiter instance.
  *
  * @example
- * ```typescript
- * const storage = createMemoryStorage();
- * const strategyFactory = createFixedWindowStrategy({
- *   windowMs: 60000, // 1 minute
- *   limit: 100,      // 100 requests per minute
- * });
- *
+ * ```ts
  * const limiter = createRateLimiter({
- *   strategy: strategyFactory,
- *   storage: storage,
- *   prefix: 'my-app', // Optional prefix
- *   onError: 'deny'   // Default behavior
+ *   strategy: createFixedWindowStrategy({ windowMs: '1m', limit: 100 }),
+ *   storage: createMemoryStorage(),
+ *   prefix: 'my-app',
  * });
  *
- * // Use the limiter
- * const result = await limiter.consume('user-id');
- * if (result.allowed) {
- *   // Process the request
- * } else {
- *   // Reject the request
+ * const { success } = await limiter.limit('user-123');
+ * if (!success) {
+ *   // Rate limit exceeded
  * }
  * ```
  */
-export function createRateLimiter(
-    options: CreateRateLimiterOptions
+export function createRateLimiter<T extends RateLimitStrategy>(
+    config: RateLimiterConfig<T>
 ): RateLimiterInstance {
-    // Determine the prefix
-    const prefix = options.prefix ?? generateUniquePrefix()
+    const prefix = config.prefix ?? `rl:${Math.random().toString(36).slice(2)}`
 
-    // Execute the strategy factory with the context
-    const strategyInstance = options.strategy({
-        storage: options.storage,
-        prefix: prefix,
+    const strategy = config.strategy({
+        storage: config.storage,
+        prefix,
     })
 
     return new RateLimiter({
-        strategy: strategyInstance,
-        storage: options.storage,
-        onError: options.onError,
+        strategy,
+        storage: config.storage,
+        onError: config.onError,
     })
 }
 
 /**
- * Creates a `RedisStorage` instance.
- *
- * This function creates a new RedisStorage instance that uses Redis as the storage backend.
- * It's ideal for production and distributed environments where you need to share rate limiting
- * state across multiple application instances.
- *
- * @param redis An initialized and connected `RedisClientType` instance.
- * @returns A configured instance of `RedisStorage`.
- *
- * @example
- * ```typescript
- * import { createClient } from 'redis';
- *
- * const redisClient = createClient({
- *   url: 'redis://localhost:6379'
- * });
- * await redisClient.connect();
- *
- * const storage = createRedisStorage(redisClient);
- * ```
- */
-export function createRedisStorage(redis: RedisClientType): Storage {
-    return new RedisStorage(redis)
-}
-
-/**
- * Creates a `MemoryStorage` instance.
- * Useful for testing or single-process applications.
- *
- * This function creates a new MemoryStorage instance that uses an in-memory Map as the storage backend.
- * It's ideal for testing and development environments where you don't need to persist rate limiting
- * state or share it across multiple application instances.
- *
- * @returns A configured instance of `MemoryStorage`.
- *
- * @example
- * ```typescript
- * const storage = createMemoryStorage();
- * ```
+ * Creates an in-memory storage backend.
+ * This is useful for single-process applications or for testing.
  */
 export function createMemoryStorage(): Storage {
     return new MemoryStorage()
+}
+
+// --- Type Guards ---
+
+/**
+ * Checks if the provided object is a RedisLike instance.
+ */
+function isRedisLike(obj: unknown): obj is RedisLike {
+    return (
+        !!obj &&
+        typeof obj === 'object' &&
+        'get' in obj &&
+        'set' in obj &&
+        typeof obj.get === 'function' &&
+        typeof obj.set === 'function'
+    )
+}
+
+/**
+ * Checks if the provided object is a RedisStorageOptions configuration.
+ */
+function isRedisStorageOptions(obj: unknown): obj is RedisStorageOptions {
+    return (
+        !!obj &&
+        typeof obj === 'object' &&
+        'redis' in obj &&
+        (isRedisLike(obj.redis) || typeof obj.redis === 'function')
+    )
+}
+
+/**
+ * Checks if the provided object is an AutoRedisConfig configuration.
+ */
+function isAutoRedisConfig(obj: unknown): obj is AutoRedisConfig {
+    return (
+        !!obj &&
+        typeof obj === 'object' &&
+        !('redis' in obj) && // RedisStorageOptions has 'redis', AutoRedisConfig doesn't
+        !isRedisLike(obj) && // Not a Redis client instance
+        typeof obj !== 'function' // Not a factory function
+    )
+}
+
+/**
+ * Creates a Redis-backed storage backend for rate limiting.
+ *
+ * This function provides a flexible way to create a RedisStorage instance with
+ * various configuration options. It's suitable for distributed applications
+ * that need to share rate limit state across multiple processes or servers.
+ *
+ * @param config Configuration options for the Redis storage. This can be:
+ *   - A Redis client instance
+ *   - A function that returns a Redis client or a Promise of a Redis client
+ *   - A RedisStorageOptions object for more control
+ *   - An AutoRedisConfig object for automatic client creation
+ * @returns A configured RedisStorage instance
+ *
+ * @example
+ * ```typescript
+ * // Auto-create a client from a URL
+ * const redisStorage = createRedisStorage({ url: 'redis://localhost:6379' });
+ *
+ * // Use an existing Redis client
+ * import { createClient } from 'redis';
+ * const redisClient = createClient();
+ * await redisClient.connect();
+ * const redisStorageWithClient = createRedisStorage(redisClient);
+ *
+ * // Use a lazy factory function
+ * const redisStorageWithFactory = createRedisStorage(async () => {
+ *   const client = createClient();
+ *   await client.connect();
+ *   return client;
+ * });
+ *
+ * // Use full RedisStorageOptions
+ * const redisStorageWithOptions = createRedisStorage({
+ *   redis: redisClient,
+ *   keyPrefix: 'myapp',
+ *   timeout: 3000
+ * });
+ * ```
+ *
+ * @see RedisStorage
+ * @see RedisStorageOptions
+ * @see AutoRedisConfig
+ */
+export function createRedisStorage(
+    config:
+        | RedisStorageOptions
+        | AutoRedisConfig
+        | RedisLike
+        | (() => Promise<RedisLike>)
+        | (() => RedisLike)
+): RedisStorage {
+    // Case 1: Full RedisStorageOptions object
+    if (isRedisStorageOptions(config)) {
+        return new RedisStorage(config)
+    }
+
+    // Case 2: Redis-like client instance
+    if (isRedisLike(config)) {
+        return new RedisStorage({ redis: config })
+    }
+
+    // Case 3: Factory function (sync or async)
+    if (typeof config === 'function') {
+        return new RedisStorage({ redis: config })
+    }
+
+    // Case 4: AutoRedisConfig for client auto-creation
+    if (isAutoRedisConfig(config)) {
+        const {
+            keyPrefix,
+            autoConnect = true,
+            timeout,
+            ...redisClientOptions
+        } = config
+
+        const redisFactory = async (): Promise<RedisLike> => {
+            const client = createClient(
+                redisClientOptions
+            ) as unknown as RedisLike
+            if (autoConnect && client.connect) {
+                await client.connect()
+            }
+            return client
+        }
+
+        const storageOptions: RedisStorageOptions = {
+            redis: redisFactory,
+            autoConnect,
+            timeout,
+        }
+
+        if (keyPrefix) {
+            storageOptions.keyPrefix = keyPrefix
+        }
+
+        return new RedisStorage(storageOptions)
+    }
+
+    throw new Error('Invalid configuration provided for createRedisStorage.')
 }

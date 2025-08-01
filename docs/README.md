@@ -6,13 +6,22 @@
 
 ## Interfaces
 
-- [CreateRateLimiterOptions](interfaces/CreateRateLimiterOptions.md)
+- [AutoRedisConfig](interfaces/AutoRedisConfig.md)
 - [ExpressMiddlewareOptions](interfaces/ExpressMiddlewareOptions.md)
-- [FixedWindowStrategyConfig](interfaces/FixedWindowStrategyConfig.md)
+- [FixedWindowStrategy](interfaces/FixedWindowStrategy.md)
+- [RateLimiterConfig](interfaces/RateLimiterConfig.md)
 - [RateLimiterInstance](interfaces/RateLimiterInstance.md)
 - [RateLimiterResult](interfaces/RateLimiterResult.md)
 - [RateLimitStrategy](interfaces/RateLimitStrategy.md)
-- [SlidingWindowStrategyConfig](interfaces/SlidingWindowStrategyConfig.md)
+- [RedisLike](interfaces/RedisLike.md)
+- [RedisMultiLike](interfaces/RedisMultiLike.md)
+- [RedisStorage](interfaces/RedisStorage.md)
+- [RedisStorageOptions](interfaces/RedisStorageOptions.md)
+- [SlidingWindowStrategy](interfaces/SlidingWindowStrategy.md)
+- [Storage](interfaces/Storage.md)
+- [StoragePipeline](interfaces/StoragePipeline.md)
+- [StrategyFactory](interfaces/StrategyFactory.md)
+- [WindowOptions](interfaces/WindowOptions.md)
 
 ## Functions
 

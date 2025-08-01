@@ -35,32 +35,69 @@ export interface RateLimitStrategy {
 /**
  * Defines the contract for a strategy factory function.
  *
- * A StrategyFactory is a function that, when executed with a context containing
- * storage and prefix, returns an instance of a rate limiting strategy.
+ * A StrategyFactory is a higher-order function that creates and configures
+ * rate limiting strategy instances. It encapsulates the creation logic and
+ * dependencies, making it easy to create pre-configured strategies.
  *
- * @template T The type of strategy to create (e.g., RateLimitStrategy).
+ * @template T The type of strategy to create (e.g., FixedWindowStrategy, SlidingWindowStrategy).
+ *
+ * @example
+ * ```typescript
+ * // Create a factory for a fixed window strategy
+ * const createFixedWindow = (windowMs: number, limit: number): StrategyFactory<FixedWindowStrategy> => {
+ *   return ({ storage, prefix }) => {
+ *     return new FixedWindowStrategy(storage, prefix, windowMs, limit);
+ *   };
+ * };
+ *
+ * // Use the factory
+ * const factory = createFixedWindow(60000, 100); // 100 requests per minute
+ * const strategy = factory({ storage, prefix: 'rate-limit:' });
+ * ```
+ *
+ * @see createFixedWindowStrategy
+ * @see createSlidingWindowStrategy
  */
 export interface StrategyFactory<T> {
     /**
      * Creates a strategy instance with the provided context.
      *
      * @param context The context containing storage and prefix.
-     * @param context.storage The storage instance to use.
-     * @param context.prefix The prefix for storage keys.
+     * @param context.storage The storage instance to use for persisting rate limit data.
+     * @param context.prefix The prefix to use for all storage keys to avoid collisions.
      * @returns An instance of the strategy.
+     *
+     * @example
+     * ```typescript
+     * const strategy = factory({
+     *   storage: new MemoryStorage(),
+     *   prefix: 'myapp:'
+     * });
+     * ```
      */
     (context: { storage: Storage; prefix: string }): T
 }
 
 /**
  * Implements the Fixed Window rate limiting strategy using a generic storage backend.
- */
-/**
- * Implements the Fixed Window rate limiting strategy using a generic storage backend.
  *
  * The fixed window strategy divides time into fixed intervals (windows) and allows
  * a maximum number of requests within each window. Once the limit is reached,
  * subsequent requests are denied until the next window begins.
+ *
+ * This strategy is simple and efficient, with constant time complexity O(1) for
+ * both memory and computation. However, it can allow up to 2x the limit in a
+ * short period when traffic spikes occur at window boundaries.
+ *
+ * @example
+ * ```typescript
+ * const storage = new MemoryStorage();
+ * const strategy = new FixedWindowStrategy(storage, 'rate-limit:', 60000, 100);
+ * const result = await strategy.limit('user-123');
+ * if (!result.allowed) {
+ *   console.log(`Rate limit exceeded. Try again in ${Math.ceil(result.reset / 1000)} seconds`);
+ * }
+ * ```
  */
 export class FixedWindowStrategy implements RateLimitStrategy {
     private storage: Storage
@@ -118,6 +155,20 @@ export class FixedWindowStrategy implements RateLimitStrategy {
  * considering the request rate over a rolling time window. It uses a sorted set
  * to track request timestamps and allows a maximum number of requests within
  * any window of the specified duration.
+ *
+ * This strategy is more accurate than the fixed window approach but requires
+ * more storage and computation (O(log n) time complexity for Redis operations).
+ * It prevents the "2x limit" issue of the fixed window strategy.
+ *
+ * @example
+ * ```typescript
+ * const storage = new MemoryStorage();
+ * const strategy = new SlidingWindowStrategy(storage, 'rate-limit:', 60000, 100);
+ * const result = await strategy.limit('user-123');
+ * if (!result.allowed) {
+ *   console.log(`Rate limit exceeded. Try again in ${Math.ceil(result.reset / 1000)} seconds`);
+ * }
+ * ```
  */
 export class SlidingWindowStrategy implements RateLimitStrategy {
     private storage: Storage

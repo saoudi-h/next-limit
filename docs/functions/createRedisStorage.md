@@ -6,39 +6,63 @@
 
 # Function: createRedisStorage()
 
-> **createRedisStorage**(`redis`): `Storage`
+> **createRedisStorage**(`config`): [`RedisStorage`](../interfaces/RedisStorage.md)
 
-Defined in: [factories.ts:306](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L306)
+Defined in: [src/factories.ts:327](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/factories.ts#L327)
 
-Creates a `RedisStorage` instance.
+Creates a Redis-backed storage backend for rate limiting.
 
-This function creates a new RedisStorage instance that uses Redis as the storage backend.
-It's ideal for production and distributed environments where you need to share rate limiting
-state across multiple application instances.
+This function provides a flexible way to create a RedisStorage instance with
+various configuration options. It's suitable for distributed applications
+that need to share rate limit state across multiple processes or servers.
 
 ## Parameters
 
-### redis
+### config
 
-`RedisClientType`
+Configuration options for the Redis storage. This can be:
+  - A Redis client instance
+  - A function that returns a Redis client or a Promise of a Redis client
+  - A RedisStorageOptions object for more control
+  - An AutoRedisConfig object for automatic client creation
 
-An initialized and connected `RedisClientType` instance.
+[`RedisLike`](../interfaces/RedisLike.md) | [`RedisStorageOptions`](../interfaces/RedisStorageOptions.md) | [`AutoRedisConfig`](../interfaces/AutoRedisConfig.md) | () => `Promise`\<[`RedisLike`](../interfaces/RedisLike.md)\> | () => [`RedisLike`](../interfaces/RedisLike.md)
 
 ## Returns
 
-`Storage`
+[`RedisStorage`](../interfaces/RedisStorage.md)
 
-A configured instance of `RedisStorage`.
+A configured RedisStorage instance
 
 ## Example
 
 ```typescript
+// Auto-create a client from a URL
+const redisStorage = createRedisStorage({ url: 'redis://localhost:6379' });
+
+// Use an existing Redis client
 import { createClient } from 'redis';
-
-const redisClient = createClient({
-  url: 'redis://localhost:6379'
-});
+const redisClient = createClient();
 await redisClient.connect();
+const redisStorageWithClient = createRedisStorage(redisClient);
 
-const storage = createRedisStorage(redisClient);
+// Use a lazy factory function
+const redisStorageWithFactory = createRedisStorage(async () => {
+  const client = createClient();
+  await client.connect();
+  return client;
+});
+
+// Use full RedisStorageOptions
+const redisStorageWithOptions = createRedisStorage({
+  redis: redisClient,
+  keyPrefix: 'myapp',
+  timeout: 3000
+});
 ```
+
+## See
+
+ - RedisStorage
+ - RedisStorageOptions
+ - AutoRedisConfig

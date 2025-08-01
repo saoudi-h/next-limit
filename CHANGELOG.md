@@ -2,17 +2,17 @@
 
 ### Features
 
-* add support for string time format in rate limiter factories ([42345eb](https://github.com/saoudi-h/next-limit/commit/42345eb6e5365f830bd98968704850350369bd92))
+- add support for string time format in rate limiter factories ([42345eb](https://github.com/saoudi-h/next-limit/commit/42345eb6e5365f830bd98968704850350369bd92))
 
 ## [1.1.0](https://github.com/saoudi-h/next-limit/compare/v1.0.2...v1.1.0) (2025-08-01)
 
 ### Features
 
-* **core:** refactor rate limiter architecture with factory context ([31ae6fb](https://github.com/saoudi-h/next-limit/commit/31ae6fbf11d50cb2b4a1f18ae2cacd02fb795520))
+- **core:** refactor rate limiter architecture with factory context ([31ae6fb](https://github.com/saoudi-h/next-limit/commit/31ae6fbf11d50cb2b4a1f18ae2cacd02fb795520))
 
 ### Bug Fixes
 
-* **middleware:** update express/fastify middleware for new factory API ([270ba8d](https://github.com/saoudi-h/next-limit/commit/270ba8d87d7909981e202bbda2fa5fca6bf0c77c))
+- **middleware:** update express/fastify middleware for new factory API ([270ba8d](https://github.com/saoudi-h/next-limit/commit/270ba8d87d7909981e202bbda2fa5fca6bf0c77c))
 
 ## [1.0.2](https://github.com/saoudi-h/next-limit/compare/v1.0.1...v1.0.2) (2025-07-31)
 

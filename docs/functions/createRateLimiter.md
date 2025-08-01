@@ -6,52 +6,39 @@
 
 # Function: createRateLimiter()
 
-> **createRateLimiter**(`options`): [`RateLimiterInstance`](../interfaces/RateLimiterInstance.md)
+> **createRateLimiter**\<`T`\>(`config`): [`RateLimiterInstance`](../interfaces/RateLimiterInstance.md)
 
-Defined in: [factories.ts:265](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L265)
+Defined in: [src/factories.ts:217](https://github.com/saoudi-h/next-limit/blob/f416490a04def3b4fa337260ecf1c729b660c4a7/src/factories.ts#L217)
 
-Creates and configures a new rate limiter instance.
-This is the main entry point for using the library.
+Creates and configures a rate limiter instance.
 
-The createRateLimiter function takes a configuration object that specifies
-the rate limiting strategy, storage backend, optional prefix, and error handling policy.
-It returns a RateLimiterInstance that can be used to check if requests are allowed.
+## Type Parameters
+
+### T
+
+`T` *extends* [`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
 
 ## Parameters
 
-### options
+### config
 
-[`CreateRateLimiterOptions`](../interfaces/CreateRateLimiterOptions.md)
-
-The options for the rate limiter.
+[`RateLimiterConfig`](../interfaces/RateLimiterConfig.md)\<`T`\>
 
 ## Returns
 
 [`RateLimiterInstance`](../interfaces/RateLimiterInstance.md)
 
-A `RateLimiterInstance` ready to be used.
-
 ## Example
 
-```typescript
-const storage = createMemoryStorage();
-const strategyFactory = createFixedWindowStrategy({
-  windowMs: 60000, // 1 minute
-  limit: 100,      // 100 requests per minute
-});
-
+```ts
 const limiter = createRateLimiter({
-  strategy: strategyFactory,
-  storage: storage,
-  prefix: 'my-app', // Optional prefix
-  onError: 'deny'   // Default behavior
+  strategy: createFixedWindowStrategy({ windowMs: '1m', limit: 100 }),
+  storage: createMemoryStorage(),
+  prefix: 'my-app',
 });
 
-// Use the limiter
-const result = await limiter.consume('user-id');
-if (result.allowed) {
-  // Process the request
-} else {
-  // Reject the request
+const { success } = await limiter.limit('user-123');
+if (!success) {
+  // Rate limit exceeded
 }
 ```
