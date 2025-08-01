@@ -8,7 +8,7 @@
 
 > **createRedisStorage**(`redis`): `Storage`
 
-Defined in: [factories.ts:248](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L248)
+Defined in: [factories.ts:306](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L306)
 
 Creates a `RedisStorage` instance.
 

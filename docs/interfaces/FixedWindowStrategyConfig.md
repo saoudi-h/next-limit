@@ -6,7 +6,7 @@
 
 # Interface: FixedWindowStrategyConfig
 
-Defined in: [factories.ts:25](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L25)
+Defined in: [factories.ts:27](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L27)
 
 Configuration for the Fixed Window strategy.
 
@@ -20,7 +20,7 @@ a maximum number of requests within each window.
 
 > **limit**: `number`
 
-Defined in: [factories.ts:29](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L29)
+Defined in: [factories.ts:31](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L31)
 
 The maximum number of requests allowed within the window.
 
@@ -28,8 +28,8 @@ The maximum number of requests allowed within the window.
 
 ### windowMs
 
-> **windowMs**: `number`
+> **windowMs**: `number` \| `StringValue`
 
-Defined in: [factories.ts:27](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L27)
+Defined in: [factories.ts:29](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L29)
 
-The duration of the time window in milliseconds.
+The duration of the time window in milliseconds or a string format (e.g., "1m", "1h").

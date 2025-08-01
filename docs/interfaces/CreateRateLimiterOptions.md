@@ -6,7 +6,7 @@
 
 # Interface: CreateRateLimiterOptions
 
-Defined in: [factories.ts:130](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L130)
+Defined in: [factories.ts:188](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L188)
 
 Options for creating a rate limiter with the `createRateLimiter` factory.
 
@@ -19,7 +19,7 @@ It includes the strategy factory, storage instance, optional prefix, and error h
 
 > `optional` **onError**: `"allow"` \| `"deny"` \| `"throw"`
 
-Defined in: [factories.ts:157](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L157)
+Defined in: [factories.ts:215](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L215)
 
 Defines the behavior when a storage error occurs.
 - 'allow': The request is allowed to proceed.
@@ -38,7 +38,7 @@ Defines the behavior when a storage error occurs.
 
 > `optional` **prefix**: `string`
 
-Defined in: [factories.ts:148](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L148)
+Defined in: [factories.ts:206](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L206)
 
 An optional prefix for storage keys.
 If provided, it will be used as the prefix for all storage keys.
@@ -50,7 +50,7 @@ If not provided, a unique prefix will be automatically generated.
 
 > **storage**: `Storage`
 
-Defined in: [factories.ts:141](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L141)
+Defined in: [factories.ts:199](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L199)
 
 The storage instance to use.
 Create this using a storage factory like `createMemoryStorage`.
@@ -61,7 +61,7 @@ Create this using a storage factory like `createMemoryStorage`.
 
 > **strategy**: `StrategyFactory`\<[`RateLimitStrategy`](RateLimitStrategy.md)\>
 
-Defined in: [factories.ts:135](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L135)
+Defined in: [factories.ts:193](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L193)
 
 The rate limiting strategy factory to use.
 Create this using a strategy factory like `createFixedWindowStrategy`.

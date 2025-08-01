@@ -4,6 +4,7 @@
  */
 
 import { RedisClientType } from 'redis'
+import type { StringValue } from 'ms'
 import { RateLimiter, RateLimiterInstance } from './core/rate-limiter'
 import {
     FixedWindowStrategy,
@@ -12,6 +13,7 @@ import {
     StrategyFactory,
 } from './core/strategy'
 import { MemoryStorage, RedisStorage, Storage } from './core/storage'
+import ms from 'ms'
 
 // --- Strategy Configuration Types ---
 
@@ -23,8 +25,8 @@ import { MemoryStorage, RedisStorage, Storage } from './core/storage'
  * a maximum number of requests within each window.
  */
 export interface FixedWindowStrategyConfig {
-    /** The duration of the time window in milliseconds. */
-    windowMs: number
+    /** The duration of the time window in milliseconds or a string format (e.g., "1m", "1h"). */
+    windowMs: number | StringValue
     /** The maximum number of requests allowed within the window. */
     limit: number
 }
@@ -37,8 +39,8 @@ export interface FixedWindowStrategyConfig {
  * considering the request rate over a rolling time window.
  */
 export interface SlidingWindowStrategyConfig {
-    /** The duration of the time window in milliseconds. */
-    windowMs: number
+    /** The duration of the time window in milliseconds or a string format (e.g., "1m", "1h"). */
+    windowMs: number | StringValue
     /** The maximum number of requests allowed within the window. */
     limit: number
 }
@@ -52,7 +54,7 @@ export interface SlidingWindowStrategyConfig {
  * storage and prefix, creates a new `FixedWindowStrategy` instance.
  *
  * @param config The configuration for the fixed window strategy.
- * @param config.windowMs The duration of the time window in milliseconds.
+ * @param config.windowMs The duration of the time window in milliseconds or a string format (e.g., "1m", "1h").
  * @param config.limit The maximum number of requests allowed within the window.
  * @returns A factory function that creates a `FixedWindowStrategy` instance.
  *
@@ -68,15 +70,43 @@ export interface SlidingWindowStrategyConfig {
  *   prefix: 'my-app'
  * });
  * ```
+ *
+ * @example
+ * ```typescript
+ * const strategyFactory = createFixedWindowStrategy({
+ *   windowMs: "1m", // 1 minute
+ *   limit: 100,     // 100 requests per minute
+ * });
+ *
+ * const strategy = strategyFactory({
+ *   storage: createMemoryStorage(),
+ *   prefix: 'my-app'
+ * });
+ * ```
+ *
+ * @throws Will throw an error if `windowMs` is not a valid positive number or a StringValue from `ms` (e.g., "1m", "1h").
+ * @see https://github.com/vercel/ms for more information on string format.
  */
 export function createFixedWindowStrategy(
     config: FixedWindowStrategyConfig
 ): StrategyFactory<RateLimitStrategy> {
+    // Convert windowMs to milliseconds if it's a string
+    const windowMs =
+        typeof config.windowMs === 'string'
+            ? ms(config.windowMs)
+            : config.windowMs
+
+    // Validate that windowMs is a valid positive number
+    if (typeof windowMs !== 'number' || isNaN(windowMs) || windowMs <= 0) {
+        throw new Error(
+            `Invalid windowMs value: "${config.windowMs}". Please provide a valid duration string (e.g., '1h', '30m') or a positive number of milliseconds.`
+        )
+    }
     return (context: { storage: Storage; prefix: string }) => {
         return new FixedWindowStrategy(
             context.storage,
             context.prefix,
-            config.windowMs,
+            windowMs,
             config.limit
         )
     }
@@ -89,7 +119,7 @@ export function createFixedWindowStrategy(
  * storage and prefix, creates a new `SlidingWindowStrategy` instance.
  *
  * @param config The configuration for the sliding window strategy.
- * @param config.windowMs The duration of the time window in milliseconds.
+ * @param config.windowMs The duration of the time window in milliseconds or a string format (e.g., "1m", "1h").
  * @param config.limit The maximum number of requests allowed within the window.
  * @returns A factory function that creates a `SlidingWindowStrategy` instance.
  *
@@ -105,15 +135,43 @@ export function createFixedWindowStrategy(
  *   prefix: 'my-app'
  * });
  * ```
+ *
+ * @example
+ * ```typescript
+ * const strategyFactory = createSlidingWindowStrategy({
+ *   windowMs: "1m", // 1 minute
+ *   limit: 100,     // 100 requests per minute
+ * });
+ *
+ * const strategy = strategyFactory({
+ *   storage: createMemoryStorage(),
+ *   prefix: 'my-app'
+ * });
+ * ```
+ *
+ * @throws Will throw an error if `windowMs` is not a valid positive number or a StringValue from `ms` (e.g., "1m", "1h").
+ * @see https://github.com/vercel/ms for more information on string format.
  */
 export function createSlidingWindowStrategy(
     config: SlidingWindowStrategyConfig
 ): StrategyFactory<RateLimitStrategy> {
+    // Convert windowMs to milliseconds if it's a string
+    const windowMs =
+        typeof config.windowMs === 'string'
+            ? ms(config.windowMs)
+            : config.windowMs
+
+    // Validate that windowMs is a valid positive number
+    if (typeof windowMs !== 'number' || isNaN(windowMs) || windowMs <= 0) {
+        throw new Error(
+            `Invalid windowMs value: "${config.windowMs}". Please provide a valid duration string (e.g., '1h', '30m') or a positive number of milliseconds.`
+        )
+    }
     return (context: { storage: Storage; prefix: string }) => {
         return new SlidingWindowStrategy(
             context.storage,
             context.prefix,
-            config.windowMs,
+            windowMs,
             config.limit
         )
     }

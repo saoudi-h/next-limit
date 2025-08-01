@@ -8,7 +8,7 @@
 
 > **expressMiddleware**(`options`): (`req`, `res`, `next`) => `Promise`\<`void`\>
 
-Defined in: [middleware/express.ts:87](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/middleware/express.ts#L87)
+Defined in: [middleware/express.ts:87](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/middleware/express.ts#L87)
 
 Creates a rate limiting middleware for Express applications.
 

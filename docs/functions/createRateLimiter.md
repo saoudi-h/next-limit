@@ -8,7 +8,7 @@
 
 > **createRateLimiter**(`options`): [`RateLimiterInstance`](../interfaces/RateLimiterInstance.md)
 
-Defined in: [factories.ts:207](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L207)
+Defined in: [factories.ts:265](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L265)
 
 Creates and configures a new rate limiter instance.
 This is the main entry point for using the library.

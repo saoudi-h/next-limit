@@ -6,7 +6,7 @@
 
 # Interface: SlidingWindowStrategyConfig
 
-Defined in: [factories.ts:39](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L39)
+Defined in: [factories.ts:41](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L41)
 
 Configuration for the Sliding Window strategy.
 
@@ -20,7 +20,7 @@ considering the request rate over a rolling time window.
 
 > **limit**: `number`
 
-Defined in: [factories.ts:43](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L43)
+Defined in: [factories.ts:45](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L45)
 
 The maximum number of requests allowed within the window.
 
@@ -28,8 +28,8 @@ The maximum number of requests allowed within the window.
 
 ### windowMs
 
-> **windowMs**: `number`
+> **windowMs**: `number` \| `StringValue`
 
-Defined in: [factories.ts:41](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L41)
+Defined in: [factories.ts:43](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L43)
 
-The duration of the time window in milliseconds.
+The duration of the time window in milliseconds or a string format (e.g., "1m", "1h").

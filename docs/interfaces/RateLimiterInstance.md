@@ -6,7 +6,7 @@
 
 # Interface: RateLimiterInstance
 
-Defined in: [core/rate-limiter.ts:15](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/core/rate-limiter.ts#L15)
+Defined in: [core/rate-limiter.ts:15](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/core/rate-limiter.ts#L15)
 
 Defines the public interface for a rate limiter instance.
 This is what the factory function `createRateLimiter` will return.
@@ -20,7 +20,7 @@ and checking if requests are allowed based on the configured strategy.
 
 > **consume**(`identifier`): `Promise`\<[`RateLimiterResult`](RateLimiterResult.md)\>
 
-Defined in: [core/rate-limiter.ts:23](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/core/rate-limiter.ts#L23)
+Defined in: [core/rate-limiter.ts:23](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/core/rate-limiter.ts#L23)
 
 Consumes a point for a given identifier.
 This is the primary method to be called for each request to be rate-limited.

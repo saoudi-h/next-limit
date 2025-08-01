@@ -58,6 +58,22 @@ describe('Strategy Factories', () => {
             expect((strategy as any).requestLimit).toBe(100)
         })
 
+        it('should create a fixed window strategy with string time format', () => {
+            const strategyFactory = createFixedWindowStrategy({
+                windowMs: '1m',
+                limit: 100,
+            })
+            const strategy = strategyFactory({
+                storage,
+                prefix: 'test-prefix',
+            })
+            expect(strategy).toBeInstanceOf(FixedWindowStrategy)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
+            expect((strategy as any).windowMs).toBe(60000) // 1 minute in milliseconds
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
+            expect((strategy as any).requestLimit).toBe(100)
+        })
+
         describe('createRateLimiter', () => {
             const storage = createMemoryStorage()
 
@@ -108,6 +124,22 @@ describe('Strategy Factories', () => {
                 prefix: 'test-prefix',
             })
             expect(strategy).toBeInstanceOf(SlidingWindowStrategy)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
+            expect((strategy as any).requestLimit).toBe(100)
+        })
+
+        it('should create a sliding window strategy with string time format', () => {
+            const strategyFactory = createSlidingWindowStrategy({
+                windowMs: '1m',
+                limit: 100,
+            })
+            const strategy = strategyFactory({
+                storage,
+                prefix: 'test-prefix',
+            })
+            expect(strategy).toBeInstanceOf(SlidingWindowStrategy)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
+            expect((strategy as any).windowMs).toBe(60000) // 1 minute in milliseconds
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private property for test
             expect((strategy as any).requestLimit).toBe(100)
         })

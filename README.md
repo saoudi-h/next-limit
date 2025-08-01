@@ -37,7 +37,10 @@ import {
 const storage = createMemoryStorage()
 
 // 2. Create a rate limiting strategy factory
-const strategyFactory = createFixedWindowStrategy({ windowMs: 60000, limit: 100 })
+const strategyFactory = createFixedWindowStrategy({
+    windowMs: '1m',
+    limit: 100,
+})
 
 // 3. Create the rate limiter instance
 const limiter = createRateLimiter({ strategy: strategyFactory, storage })
@@ -78,7 +81,10 @@ const redisClient = await createClient({ url }).connect()
 const storage = createRedisStorage(redisClient)
 
 // 3. Create a sliding window strategy factory
-const strategyFactory = createSlidingWindowStrategy({ windowMs: 60000, limit: 100 })
+const strategyFactory = createSlidingWindowStrategy({
+    windowMs: '1m',
+    limit: 100,
+})
 
 // 4. Create the rate limiter
 const limiter = createRateLimiter({ strategy: strategyFactory, storage })
@@ -103,7 +109,10 @@ import {
 const app = express()
 
 const storage = createMemoryStorage()
-const strategyFactory = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
+const strategyFactory = createFixedWindowStrategy({
+    windowMs: 60000,
+    limit: 10,
+})
 const limiter = createRateLimiter({ strategy: strategyFactory, storage })
 
 // Pass the limiter instance directly to the middleware
@@ -130,7 +139,10 @@ import {
 const app = fastify()
 
 const storage = createMemoryStorage()
-const strategyFactory = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
+const strategyFactory = createFixedWindowStrategy({
+    windowMs: 60000,
+    limit: 10,
+})
 const limiter = createRateLimiter({ strategy: strategyFactory, storage })
 
 // Pass the limiter instance directly to the middleware
@@ -158,7 +170,7 @@ Creates a rate limiter instance.
 
 Creates a factory function for a Fixed Window strategy instance.
 
-- `config.windowMs`: The time window in milliseconds.
+- `config.windowMs`: The time window in milliseconds or a string format (e.g., "1m", "1h").
 - `config.limit`: The maximum number of requests allowed in the window.
 
 Returns a `StrategyFactory` function.
@@ -167,7 +179,7 @@ Returns a `StrategyFactory` function.
 
 Creates a factory function for a Sliding Window strategy instance.
 
-- `config.windowMs`: The time window in milliseconds.
+- `config.windowMs`: The time window in milliseconds or a string format (e.g., "1m", "1h").
 - `config.limit`: The maximum number of requests allowed in the window.
 
 Returns a `StrategyFactory` function.

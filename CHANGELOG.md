@@ -2,7 +2,7 @@
 
 ### Bug Fixes
 
-* refactor API to use factory functions ([5128498](https://github.com/saoudi-h/next-limit/commit/512849887518729295e58fd56dd73d4a78fa7436))
+- refactor API to use factory functions ([5128498](https://github.com/saoudi-h/next-limit/commit/512849887518729295e58fd56dd73d4a78fa7436))
 
 ## [1.0.1](https://github.com/saoudi-h/next-limit/compare/v1.0.0...v1.0.1) (2025-07-30)
 

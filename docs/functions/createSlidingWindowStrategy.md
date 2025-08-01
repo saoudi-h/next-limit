@@ -8,7 +8,7 @@
 
 > **createSlidingWindowStrategy**(`config`): `StrategyFactory`\<[`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)\>
 
-Defined in: [factories.ts:109](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L109)
+Defined in: [factories.ts:155](https://github.com/saoudi-h/next-limit/blob/58a6c1402186f63b5f3eecaed63a277351987cb7/src/factories.ts#L155)
 
 Creates a factory function for a `SlidingWindowStrategy` instance.
 
@@ -29,7 +29,7 @@ The configuration for the sliding window strategy.
 
 A factory function that creates a `SlidingWindowStrategy` instance.
 
-## Example
+## Examples
 
 ```typescript
 const strategyFactory = createSlidingWindowStrategy({
@@ -42,3 +42,23 @@ const strategy = strategyFactory({
   prefix: 'my-app'
 });
 ```
+
+```typescript
+const strategyFactory = createSlidingWindowStrategy({
+  windowMs: "1m", // 1 minute
+  limit: 100,     // 100 requests per minute
+});
+
+const strategy = strategyFactory({
+  storage: createMemoryStorage(),
+  prefix: 'my-app'
+});
+```
+
+## Throws
+
+Will throw an error if `windowMs` is not a valid positive number or a StringValue from `ms` (e.g., "1m", "1h").
+
+## See
+
+https://github.com/vercel/ms for more information on string format.
