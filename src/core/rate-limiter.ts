@@ -8,6 +8,9 @@ import { Storage } from './storage'
 /**
  * Defines the public interface for a rate limiter instance.
  * This is what the factory function `createRateLimiter` will return.
+ *
+ * The RateLimiterInstance provides a simple interface for consuming rate limit points
+ * and checking if requests are allowed based on the configured strategy.
  */
 export interface RateLimiterInstance {
     /**
@@ -35,6 +38,11 @@ export interface InternalRateLimiterOptions {
  * A flexible and extensible rate limiter for Node.js applications.
  * This class is not meant to be instantiated directly.
  * Use the `createRateLimiter` factory function instead.
+ *
+ * The RateLimiter class wraps a rate limiting strategy and provides error handling
+ * capabilities. It's responsible for consuming rate limit points and returning
+ * the result of the rate limiting check.
+ *
  * @internal
  */
 export class RateLimiter implements RateLimiterInstance {
@@ -42,6 +50,14 @@ export class RateLimiter implements RateLimiterInstance {
     private readonly storage: Storage
     private readonly onError: 'allow' | 'deny' | 'throw'
 
+    /**
+     * Creates a new RateLimiter instance.
+     *
+     * @param options The options for creating the rate limiter.
+     * @param options.strategy The rate limiting strategy to use.
+     * @param options.storage The storage instance to use.
+     * @param options.onError The error handling policy.
+     */
     constructor(options: InternalRateLimiterOptions) {
         this.strategy = options.strategy
         this.storage = options.storage
@@ -93,7 +109,7 @@ export class RateLimiter implements RateLimiterInstance {
      */
     async consume(identifier: string): Promise<RateLimiterResult> {
         return this.handleStorageError(
-            this.strategy.limit(identifier, this.storage)
+            this.strategy.limit(identifier)
         ) as Promise<RateLimiterResult>
     }
 }
