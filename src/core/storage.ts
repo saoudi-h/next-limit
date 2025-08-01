@@ -3,7 +3,7 @@
  * This decouples the rate limiting strategies from the underlying storage implementation.
  */
 
-import { RedisClientType } from 'redis'
+import type { RedisClientType } from 'redis'
 
 /**
  * Defines the contract for a generic storage pipeline for atomic operations.

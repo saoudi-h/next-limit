@@ -3,7 +3,7 @@
  * This is the primary entry point for configuring and creating rate limiters.
  */
 
-import { RedisClientType } from 'redis'
+import type { RedisClientType } from 'redis'
 import type { StringValue } from 'ms'
 import { RateLimiter, RateLimiterInstance } from './core/rate-limiter'
 import {
