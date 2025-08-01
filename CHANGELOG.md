@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/saoudi-h/next-limit/compare/v1.1.0...v1.2.0) (2025-08-01)
+
+### Features
+
+* add support for string time format in rate limiter factories ([42345eb](https://github.com/saoudi-h/next-limit/commit/42345eb6e5365f830bd98968704850350369bd92))
+
 ## [1.1.0](https://github.com/saoudi-h/next-limit/compare/v1.0.2...v1.1.0) (2025-08-01)
 
 ### Features
