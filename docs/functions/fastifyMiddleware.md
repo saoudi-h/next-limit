@@ -8,7 +8,7 @@
 
 > **fastifyMiddleware**(`limiter`): (`request`, `reply`) => `Promise`\<`void`\>
 
-Defined in: [middleware/fastify.ts:42](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/middleware/fastify.ts#L42)
+Defined in: [middleware/fastify.ts:48](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/middleware/fastify.ts#L48)
 
 Creates a rate limiting hook for Fastify applications.
 
@@ -58,8 +58,14 @@ import {
 const app = fastify();
 
 const storage = createMemoryStorage();
+const strategyFactory = createFixedWindowStrategy({
+  windowMs: 60000, // 1 minute
+  limit: 100,      // 100 requests per minute
+});
+
 const limiter = createRateLimiter({
-  strategy: createFixedWindowStrategy({ windowMs: 60 * 1000, limit: 100 }, storage)
+  strategy: strategyFactory,
+  storage: storage
 });
 
 app.addHook('preHandler', fastifyMiddleware(limiter));

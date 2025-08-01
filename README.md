@@ -36,11 +36,11 @@ import {
 // 1. Create a storage adapter
 const storage = createMemoryStorage()
 
-// 2. Create a rate limiting strategy
-const strategy = createFixedWindowStrategy({ windowMs: 60000, limit: 100 })
+// 2. Create a rate limiting strategy factory
+const strategyFactory = createFixedWindowStrategy({ windowMs: 60000, limit: 100 })
 
 // 3. Create the rate limiter instance
-const limiter = createRateLimiter({ strategy, storage })
+const limiter = createRateLimiter({ strategy: strategyFactory, storage })
 
 async function handleRequest(userId: string) {
     const result = await limiter.consume(userId)
@@ -67,19 +67,21 @@ import {
     createSlidingWindowStrategy,
     createRedisStorage,
 } from 'next-limit'
-import Redis from 'redis'
+import { createClient } from 'redis'
+
+const url = 'redis://:password@localhost:6379'
 
 // 1. Create a Redis client
-const redisClient = new Redis()
+const redisClient = await createClient({ url }).connect()
 
 // 2. Create a Redis storage adapter
 const storage = createRedisStorage(redisClient)
 
-// 3. Create a sliding window strategy
-const strategy = createSlidingWindowStrategy({ windowMs: 60000, limit: 100 })
+// 3. Create a sliding window strategy factory
+const strategyFactory = createSlidingWindowStrategy({ windowMs: 60000, limit: 100 })
 
 // 4. Create the rate limiter
-const limiter = createRateLimiter({ strategy, storage })
+const limiter = createRateLimiter({ strategy: strategyFactory, storage })
 
 // Now use the limiter as in the basic example
 // await limiter.consume(identifier);
@@ -101,10 +103,11 @@ import {
 const app = express()
 
 const storage = createMemoryStorage()
-const strategy = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
-const limiter = createRateLimiter({ strategy, storage })
+const strategyFactory = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
+const limiter = createRateLimiter({ strategy: strategyFactory, storage })
 
-app.use(expressMiddleware(limiter))
+// Pass the limiter instance directly to the middleware
+app.use(expressMiddleware({ limiter }))
 
 app.get('/', (req, res) => {
     res.send('Hello, world!')
@@ -127,10 +130,11 @@ import {
 const app = fastify()
 
 const storage = createMemoryStorage()
-const strategy = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
-const limiter = createRateLimiter({ strategy, storage })
+const strategyFactory = createFixedWindowStrategy({ windowMs: 60000, limit: 10 })
+const limiter = createRateLimiter({ strategy: strategyFactory, storage })
 
-app.addHook('onRequest', fastifyMiddleware(limiter))
+// Pass the limiter instance directly to the middleware
+app.addHook('preHandler', fastifyMiddleware(limiter))
 
 app.get('/', async (request, reply) => {
     return { hello: 'world' }
@@ -143,29 +147,51 @@ app.listen({ port: 3000 })
 
 ### `createRateLimiter(options)`
 
-- `options.strategy`: The rate limiting strategy to use.
-- `options.storage`: The storage adapter to use.
+Creates a rate limiter instance.
+
+- `options.strategy`: A strategy factory function (e.g., created by `createFixedWindowStrategy`).
+- `options.storage`: The storage adapter instance (e.g., created by `createMemoryStorage`).
+- `options.prefix` (optional): A prefix for storage keys. If not provided, a unique prefix is generated.
 - `options.onError`: Policy for handling storage errors (`'deny'`, `'allow'`, `'throw'`). Defaults to `'deny'`.
 
-### `createFixedWindowStrategy(options)`
+### `createFixedWindowStrategy(config)`
 
-- `options.windowMs`: The time window in milliseconds.
-- `options.limit`: The maximum number of requests allowed in the window.
-- `options.prefix` (optional): A prefix for storage keys.
+Creates a factory function for a Fixed Window strategy instance.
 
-### `createSlidingWindowStrategy(options)`
+- `config.windowMs`: The time window in milliseconds.
+- `config.limit`: The maximum number of requests allowed in the window.
 
-- `options.windowMs`: The time window in milliseconds.
-- `options.limit`: The maximum number of requests allowed in the window.
-- `options.prefix` (optional): A prefix for storage keys.
+Returns a `StrategyFactory` function.
+
+### `createSlidingWindowStrategy(config)`
+
+Creates a factory function for a Sliding Window strategy instance.
+
+- `config.windowMs`: The time window in milliseconds.
+- `config.limit`: The maximum number of requests allowed in the window.
+
+Returns a `StrategyFactory` function.
+
+### `createMemoryStorage()`
+
+Creates an in-memory storage adapter instance.
+
+### `createRedisStorage(redisClient)`
+
+Creates a Redis storage adapter instance.
+
+- `redisClient`: An initialized and connected Redis client instance.
 
 ### `limiter.consume(identifier)`
+
+Consumes a point for a given identifier and checks if the request is allowed.
 
 - `identifier`: A unique string to identify the user (e.g., IP address, user ID).
 - Returns a `Promise<RateLimiterResult>`:
     - `allowed`: `boolean`
-    - `remaining`: `number | undefined`
-    - `reset`: `number | undefined` (timestamp in ms)
+    - `limit`: `number`
+    - `remaining`: `number`
+    - `reset`: `number` (timestamp in ms)
 
 ## Documentation
 

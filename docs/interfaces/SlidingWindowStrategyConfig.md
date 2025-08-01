@@ -6,9 +6,13 @@
 
 # Interface: SlidingWindowStrategyConfig
 
-Defined in: [factories.ts:32](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/factories.ts#L32)
+Defined in: [factories.ts:39](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L39)
 
 Configuration for the Sliding Window strategy.
+
+This interface defines the configuration options for the sliding window rate limiting strategy.
+The sliding window strategy provides a more accurate rate limiting approach by
+considering the request rate over a rolling time window.
 
 ## Properties
 
@@ -16,19 +20,9 @@ Configuration for the Sliding Window strategy.
 
 > **limit**: `number`
 
-Defined in: [factories.ts:36](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/factories.ts#L36)
+Defined in: [factories.ts:43](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L43)
 
 The maximum number of requests allowed within the window.
-
-***
-
-### prefix?
-
-> `optional` **prefix**: `string`
-
-Defined in: [factories.ts:38](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/factories.ts#L38)
-
-An optional prefix for storage keys, specific to this strategy instance.
 
 ***
 
@@ -36,6 +30,6 @@ An optional prefix for storage keys, specific to this strategy instance.
 
 > **windowMs**: `number`
 
-Defined in: [factories.ts:34](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/factories.ts#L34)
+Defined in: [factories.ts:41](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L41)
 
 The duration of the time window in milliseconds.

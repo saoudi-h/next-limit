@@ -6,11 +6,14 @@
 
 # Function: createSlidingWindowStrategy()
 
-> **createSlidingWindowStrategy**(`config`): [`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
+> **createSlidingWindowStrategy**(`config`): `StrategyFactory`\<[`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)\>
 
-Defined in: [factories.ts:65](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/factories.ts#L65)
+Defined in: [factories.ts:109](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/factories.ts#L109)
 
-Creates a `SlidingWindowStrategy` instance.
+Creates a factory function for a `SlidingWindowStrategy` instance.
+
+This function returns a factory that, when executed with a context containing
+storage and prefix, creates a new `SlidingWindowStrategy` instance.
 
 ## Parameters
 
@@ -22,6 +25,20 @@ The configuration for the sliding window strategy.
 
 ## Returns
 
-[`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)
+`StrategyFactory`\<[`RateLimitStrategy`](../interfaces/RateLimitStrategy.md)\>
 
-A configured instance of `SlidingWindowStrategy`.
+A factory function that creates a `SlidingWindowStrategy` instance.
+
+## Example
+
+```typescript
+const strategyFactory = createSlidingWindowStrategy({
+  windowMs: 60000, // 1 minute
+  limit: 100,      // 100 requests per minute
+});
+
+const strategy = strategyFactory({
+  storage: createMemoryStorage(),
+  prefix: 'my-app'
+});
+```

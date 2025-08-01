@@ -6,17 +6,22 @@
 
 # Interface: RateLimitStrategy
 
-Defined in: [core/strategy.ts:22](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/core/strategy.ts#L22)
+Defined in: [core/strategy.ts:25](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/core/strategy.ts#L25)
 
 Defines the contract for a rate limiting strategy.
+
+This interface represents the core contract that all rate limiting strategies must implement.
+Each strategy defines how to handle rate limiting for a specific algorithm (e.g., fixed window, sliding window).
 
 ## Methods
 
 ### limit()
 
-> **limit**(`identifier`, `storage`): `Promise`\<[`RateLimiterResult`](RateLimiterResult.md)\>
+> **limit**(`identifier`): `Promise`\<[`RateLimiterResult`](RateLimiterResult.md)\>
 
-Defined in: [core/strategy.ts:23](https://github.com/saoudi-h/next-limit/blob/a021d5ea56d9eb46030653e5f5bb1bd56648180d/src/core/strategy.ts#L23)
+Defined in: [core/strategy.ts:32](https://github.com/saoudi-h/next-limit/blob/45012419e7c26986c08104835525b0ea21d24a3f/src/core/strategy.ts#L32)
+
+Checks if a request is allowed based on the rate limiting rules.
 
 #### Parameters
 
@@ -24,10 +29,10 @@ Defined in: [core/strategy.ts:23](https://github.com/saoudi-h/next-limit/blob/a0
 
 `string`
 
-##### storage
-
-`Storage`
+A unique string identifying the client (e.g., IP address).
 
 #### Returns
 
 `Promise`\<[`RateLimiterResult`](RateLimiterResult.md)\>
+
+A promise that resolves to a `RateLimiterResult` indicating whether the request is allowed.
