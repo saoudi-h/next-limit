@@ -28,8 +28,14 @@ import { FastifyRequest, FastifyReply } from 'fastify'
  * const app = fastify();
  *
  * const storage = createMemoryStorage();
+ * const strategyFactory = createFixedWindowStrategy({
+ *   windowMs: 60000, // 1 minute
+ *   limit: 100,      // 100 requests per minute
+ * });
+ *
  * const limiter = createRateLimiter({
- *   strategy: createFixedWindowStrategy({ windowMs: 60 * 1000, limit: 100 }, storage)
+ *   strategy: strategyFactory,
+ *   storage: storage
  * });
  *
  * app.addHook('preHandler', fastifyMiddleware(limiter));

@@ -41,8 +41,48 @@ export interface ExpressMiddlewareOptions {
 /**
  * Creates a rate limiting middleware for Express applications.
  *
+ * This function creates an Express middleware that uses a RateLimiterInstance
+ * to check if requests are allowed based on the configured rate limiting strategy.
+ * It automatically sets rate limit headers and handles denied requests.
+ *
  * @param options The middleware configuration options.
+ * @param options.limiter The `RateLimiterInstance` to use for checking requests.
+ * @param options.identifier A function to generate a unique identifier for a request.
+ * @param options.onDeny A function to execute when a request is denied.
  * @returns An Express middleware function.
+ *
+ * @example
+ * ```typescript
+ * import express from 'express';
+ * import {
+ *   createRateLimiter,
+ *   createMemoryStorage,
+ *   createFixedWindowStrategy,
+ *   expressMiddleware
+ * } from 'next-limit';
+ *
+ * const app = express();
+ *
+ * const storage = createMemoryStorage();
+ * const strategyFactory = createFixedWindowStrategy({
+ *   windowMs: 60000, // 1 minute
+ *   limit: 100,      // 100 requests per minute
+ * });
+ *
+ * const limiter = createRateLimiter({
+ *   strategy: strategyFactory,
+ *   storage: storage
+ * });
+ *
+ * app.use(expressMiddleware({
+ *   limiter: limiter,
+ *   identifier: (req) => req.ip ?? ''
+ * }));
+ *
+ * app.get('/', (req, res) => {
+ *   res.send('Hello, world!');
+ * });
+ * ```
  */
 export const expressMiddleware = (options: ExpressMiddlewareOptions) => {
     const { limiter, identifier, onDeny } = options
