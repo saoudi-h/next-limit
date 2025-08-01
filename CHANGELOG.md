@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/saoudi-h/next-limit/compare/v1.2.1...v1.3.0) (2025-08-01)
+
+### Features
+
+* correct prefix handling and improve type guards ([dd1649a](https://github.com/saoudi-h/next-limit/commit/dd1649af10cfa307a6f23def7d4d2e2f8eeb2cc0))
+
 ## [1.2.1](https://github.com/saoudi-h/next-limit/compare/v1.2.0...v1.2.1) (2025-08-01)
 
 ### Bug Fixes
