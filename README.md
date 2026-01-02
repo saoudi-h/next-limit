@@ -1,3 +1,26 @@
+# ⚠️ Archived & Deprecated
+
+> **This repository and the npm package `next-limit` are officially deprecated and no longer maintained.**
+
+## ➡️ Successor Project
+This project has been succeeded by the new, modular **`@ratelock`** suite, designed for better flexibility and maintenance.
+
+**Please migrate to one of the new packages for all future development and support:**
+
+*   **`@ratelock/redis`**: For Redis-based rate limiting.
+*   **`@ratelock/local`**: For in-memory rate limiting.
+
+## 🔗 Links
+*   **[`@ratelock` Main Repository & Documentation](https://github.com/saoudi-h/ratelock)** – Start here for migration guides and details.
+*   [Deprecated `next-limit` on npm](https://www.npmjs.com/package/next-limit)
+
+
+*This repository is archived and read-only. All development has moved to the `@ratelock` organization.*
+
+
+---
+
+
 # Next Limit [![Version](https://img.shields.io/npm/v/next-limit.svg)](https://www.npmjs.com/package/next-limit)
 
 `next-limit` is a modern, flexible, and high-performance rate limiting library for Node.js applications. It supports multiple rate limiting strategies and storage backends, making it suitable for both small and large-scale applications.
